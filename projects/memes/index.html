@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Transformer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Text Transformer</h1>
+    <p>Enter text in the first box, and see the transformed text in the second box.</p>
+    <input type="text" id="inputText" placeholder="Type your text here..." oninput="transformText()">
+    <textarea id="outputText" placeholder="Transformed text will appear here..." readonly></textarea>
+
+    <script>
+        function transformText() {
+            const input = document.getElementById('inputText').value;
+            const transformed = input.split('').map((char, index) =>
+                index % 2 === 1 ? char.toUpperCase() : char.toLowerCase()
+            ).join('');
+            document.getElementById('outputText').value = transformed;
+        }
+    </script>
+</body>
+
+</html>
