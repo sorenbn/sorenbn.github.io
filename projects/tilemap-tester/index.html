@@ -257,7 +257,7 @@
                             <div>Drag & drop your tilemap image here</div>
                             <div style="font-size: 12px; opacity: 0.7;">Supports PNG, JPG, GIF</div>
                         </div>
-                        <div class="tilemap-container hidden" id="tilemapContainer">
+                        <div class="tilemap-container" id="tilemapContainer" style="display: none;">
                             <img class="tilemap-image" id="tilemapImage" alt="Tilemap">
                             <div class="tile-selection" id="tileSelection"></div>
                         </div>
@@ -377,6 +377,47 @@
 
         dropZone.addEventListener('drop', handleDrop, false);
 
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('dropZone');
+            const tilemapContainer = document.getElementById('tilemapContainer');
+            const tilemapImage = document.getElementById('tilemapImage');
+
+            // Common event handlers
+            const preventDefaults = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            };
+
+            const highlight = (e) => {
+                dropZone.classList.add('dragover');
+            };
+
+            const unhighlight = (e) => {
+                dropZone.classList.remove('dragover');
+            };
+
+            // Set up events for both drop zone and tilemap container
+            [dropZone, tilemapContainer].forEach(element => {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    element.addEventListener(eventName, preventDefaults, false);
+                });
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    element.addEventListener(eventName, highlight, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    element.addEventListener(eventName, unhighlight, false);
+                });
+
+                element.addEventListener('drop', handleDrop, false);
+            });
+        }
+
+        // Call this in your initialization
+        setupDragAndDrop();
+
+        // Modify the handleDrop function to not hide the drop zone
         function handleDrop(e) {
             const dt = e.dataTransfer;
             const files = dt.files;
@@ -388,12 +429,44 @@
                     reader.onload = function (e) {
                         tilemapImage.src = e.target.result;
                         tilemapData = e.target.result;
-                        dropZone.classList.add('hidden');
-                        tilemapContainer.classList.remove('hidden');
+                        dropZone.style.display = 'none';
+                        tilemapContainer.style.display = 'block';
+                        updateAllTilesWithNewSpritesheet(e.target.result);
                     };
                     reader.readAsDataURL(file);
                 }
             }
+        }
+
+        function updateAllTilesWithNewSpritesheet(newSpritesheetData) {
+            tilemapData = newSpritesheetData;
+            const cells = document.querySelectorAll('.grid-cell');
+            cells.forEach(cell => {
+                if (cell.tileData) {
+                    // Recreate the tile with the new spritesheet
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = tileSize;
+                    canvas.height = tileSize;
+
+                    const img = new Image();
+                    img.onload = function () {
+                        ctx.clearRect(0, 0, tileSize, tileSize);
+                        ctx.save();
+                        ctx.translate(tileSize / 2, tileSize / 2);
+                        ctx.rotate((cell.tileData.rotation * Math.PI) / 180);
+                        ctx.translate(-tileSize / 2, -tileSize / 2);
+                        ctx.drawImage(img, cell.tileData.originalTile.x, cell.tileData.originalTile.y, tileSize, tileSize, 0, 0, tileSize, tileSize);
+                        ctx.restore();
+
+                        const tileDataUrl = canvas.toDataURL();
+                        cell.style.backgroundImage = `url(${tileDataUrl})`;
+                        cell.tileData.dataUrl = tileDataUrl;
+                        cell.tileData.originalTile.image = newSpritesheetData;
+                    };
+                    img.src = newSpritesheetData;
+                }
+            });
         }
 
         // Tilemap selection
@@ -610,12 +683,24 @@
         function saveGrid() {
             saveGridData();
 
+            // Create a simplified version of gridData for saving
+            const simplifiedGridData = {};
+            for (const key in gridData) {
+                if (gridData[key]) {
+                    simplifiedGridData[key] = {
+                        x: gridData[key].originalTile.x,
+                        y: gridData[key].originalTile.y,
+                        rotation: gridData[key].rotation
+                    };
+                }
+            }
+
             const saveData = {
                 gridWidth: gridWidth,
                 gridHeight: gridHeight,
                 tileSize: tileSize,
                 tilemapData: tilemapData,
-                gridData: gridData
+                gridData: simplifiedGridData  // Use the simplified data
             };
 
             const dataStr = JSON.stringify(saveData, null, 2);
@@ -655,8 +740,11 @@
                         // Restore tilemap if it exists
                         if (tilemapData) {
                             tilemapImage.src = tilemapData;
-                            dropZone.classList.add('hidden');
-                            tilemapContainer.classList.remove('hidden');
+                            dropZone.style.display = 'none';
+                            tilemapContainer.style.display = 'block';
+                        } else {
+                            dropZone.style.display = 'flex';
+                            tilemapContainer.style.display = 'none';
                         }
 
                         // Recreate grid
@@ -672,9 +760,37 @@
 
         // Restore tile to cell
         function restoreTile(cell, tileData) {
-            if (tileData && tileData.dataUrl) {
-                cell.style.backgroundImage = `url(${tileData.dataUrl})`;
-                cell.tileData = tileData;
+            if (tileData && tilemapData) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = tileSize;
+                canvas.height = tileSize;
+
+                const img = new Image();
+                img.onload = function () {
+                    ctx.clearRect(0, 0, tileSize, tileSize);
+                    ctx.save();
+                    ctx.translate(tileSize / 2, tileSize / 2);
+                    ctx.rotate((tileData.rotation * Math.PI) / 180);
+                    ctx.translate(-tileSize / 2, -tileSize / 2);
+                    ctx.drawImage(img, tileData.x, tileData.y, tileSize, tileSize, 0, 0, tileSize, tileSize);
+                    ctx.restore();
+
+                    const tileDataUrl = canvas.toDataURL();
+                    cell.style.backgroundImage = `url(${tileDataUrl})`;
+
+                    // Store the complete tile data
+                    cell.tileData = {
+                        originalTile: {
+                            x: tileData.x,
+                            y: tileData.y,
+                            image: tilemapData
+                        },
+                        rotation: tileData.rotation,
+                        dataUrl: tileDataUrl
+                    };
+                };
+                img.src = tilemapData;
             }
         }
 
