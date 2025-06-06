@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tilemap Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #2a2a2a;
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #1a1a1a;
+            padding: 10px 20px;
+            border-bottom: 1px solid #444;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            background: #333;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 3px;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .panel {
+            background: #333;
+            border-radius: 8px;
+            border: 1px solid #555;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-panel {
+            width: 60%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: #1a1a1a;
+            padding: 10px 15px;
+            border-bottom: 1px solid #555;
+            font-weight: bold;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .zoomable-container {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            position: relative;
+        }
+
+        .zoomable-content {
+            transform-origin: 0 0;
+            transition: transform 0.1s ease;
+            display: inline-block;
+            min-width: 100%;
+            min-height: 100%;
+        }
+
+        .drop-zone {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #666;
+            margin: 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .drop-zone.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .tilemap-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px;
+        }
+
+        .tilemap-image {
+            display: block;
+            max-width: 100%;
+            cursor: crosshair;
+        }
+
+        .tile-selection {
+            position: absolute;
+            border: 2px solid #ff0000;
+            pointer-events: none;
+            display: none;
+        }
+
+        .grid-container {
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .grid {
+            display: inline-block;
+            border: 1px solid #666;
+            background: #2a2a2a;
+        }
+
+        .grid-row {
+            display: flex;
+        }
+
+        .grid-cell {
+            width: 64px;
+            height: 64px;
+            border: 1px solid #444;
+            background: #333;
+            cursor: pointer;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .grid-cell:hover {
+            background-color: #555;
+        }
+
+        .grid-cell.no-grid {
+            border: none;
+        }
+
+        .tile-preview {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="instructions">
+            <h2>How to Use the Tilemap Editor</h2>
+            <p>1. Set the <strong>Tile Size</strong> (in pixels) to define the dimensions of each tile in your tilemap.
+            </p>
+            <p>2. Specify the <strong>Grid Size</strong> (width × height) to set the dimensions of your grid in tiles.
+            </p>
+            <p>3. Click <strong>Update Grid</strong> to apply the tile and grid settings.</p>
+            <p>4. Toggle <strong>Show Grid</strong> to display or hide the grid overlay on the canvas.</p>
+            <p>5. Use the <strong>Color Picker</strong> below to change the application's background color.</p>
+            <p>6. Drag and drop a tilemap spritesheet (PNG, JPG, or GIF) into the <strong>Tilemap Spritesheet</strong>
+                upload
+                area.</p>
+            <p>7. Use the <strong>Grid Editor</strong> canvas to design your tilemap by placing tiles from the
+                spritesheet.</p>
+            <p>8. <strong>Left click</strong> to place tile</p>
+            <p>9. <strong>Right click</strong> to rotate tile</p>
+            <p>10. <strong>Middle-mouse click</strong> to delete tile</p>
+            <p>8. Click <strong>Save</strong> to save your work or <strong>Load</strong> to retrieve a previous tilemap.
+            </p>
+        </div>
+
+        <br>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Tile Size:</label>
+                <input type="number" id="tileSize" value="64" min="8" max="256">
+                <span>px</span>
+            </div>
+            <div class="control-group">
+                <label>Grid Size:</label>
+                <input type="number" id="gridWidth" value="10" min="1" max="50">
+                <span>×</span>
+                <input type="number" id="gridHeight" value="10" min="1" max="50">
+            </div>
+            <button onclick="updateGrid()"
+                style="padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer;">Update
+                Grid</button>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showGrid" checked onchange="toggleGrid()">
+                    Show Grid
+                </label>
+            </div>
+            <button onclick="saveGrid()"
+                style="padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer;">Save</button>
+            <button onclick="loadGrid()"
+                style="padding: 5px 10px; background: #FF9800; color: white; border: none; border-radius: 3px; cursor: pointer;">Load</button>
+            <input type="file" id="loadFile" accept=".json" style="display: none;" onchange="handleLoadFile(event)">
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="panel left-panel">
+            <div class="panel-header">Tilemap Spritesheet</div>
+            <div class="panel-content">
+                <div class="zoomable-container" id="leftZoomContainer">
+                    <div class="zoomable-content" id="leftZoomContent">
+                        <div class="drop-zone" id="dropZone">
+                            <div>📁</div>
+                            <div>Drag & drop your tilemap image here</div>
+                            <div style="font-size: 12px; opacity: 0.7;">Supports PNG, JPG, GIF</div>
+                        </div>
+                        <div class="tilemap-container hidden" id="tilemapContainer">
+                            <img class="tilemap-image" id="tilemapImage" alt="Tilemap">
+                            <div class="tile-selection" id="tileSelection"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <div class="panel-header">Grid Editor</div>
+            <div class="panel-content">
+                <div class="zoomable-container" id="rightZoomContainer">
+                    <div class="zoomable-content" id="rightZoomContent">
+                        <div class="grid-container">
+                            <div class="grid" id="grid"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedTile = null;
+        let tilemapData = null;
+        let tileSize = 64;
+        let gridWidth = 10;
+        let gridHeight = 10;
+        let selectedTileRotation = 0;
+        let previewElement = null;
+        let gridData = {};
+        let leftZoom = 1;
+        let rightZoom = 1;
+
+        // Initialize grid
+        function createGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+
+            for (let row = 0; row < gridHeight; row++) {
+                const gridRow = document.createElement('div');
+                gridRow.className = 'grid-row';
+
+                for (let col = 0; col < gridWidth; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.style.width = tileSize + 'px';
+                    cell.style.height = tileSize + 'px';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+
+                    cell.addEventListener('click', (e) => placeTile(cell, e));
+                    cell.addEventListener('contextmenu', (e) => rotateTile(cell, e));
+                    cell.addEventListener('mousedown', (e) => {
+                        if (e.button === 1) { // Middle mouse button
+                            e.preventDefault();
+                            deleteTile(cell);
+                        }
+                    });
+
+                    // Add hover events for preview
+                    cell.addEventListener('mouseenter', (e) => showTilePreview(cell));
+                    cell.addEventListener('mouseleave', (e) => hideTilePreview(cell));
+
+                    // Restore tile data if it exists
+                    const cellKey = `${row}-${col}`;
+                    if (gridData[cellKey]) {
+                        restoreTile(cell, gridData[cellKey]);
+                    }
+
+                    gridRow.appendChild(cell);
+                }
+
+                grid.appendChild(gridRow);
+            }
+        }
+
+        function updateGrid() {
+            // Save current grid data before updating
+            saveGridData();
+
+            tileSize = parseInt(document.getElementById('tileSize').value);
+            gridWidth = parseInt(document.getElementById('gridWidth').value);
+            gridHeight = parseInt(document.getElementById('gridHeight').value);
+            createGrid();
+        }
+
+        // Drag and drop functionality
+        const dropZone = document.getElementById('dropZone');
+        const tilemapContainer = document.getElementById('tilemapContainer');
+        const tilemapImage = document.getElementById('tilemapImage');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        tilemapImage.src = e.target.result;
+                        tilemapData = e.target.result;
+                        dropZone.classList.add('hidden');
+                        tilemapContainer.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        }
+
+        // Tilemap selection
+        tilemapImage.addEventListener('click', function (e) {
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Calculate the scale between displayed image and actual image
+            const scaleX = this.naturalWidth / rect.width;
+            const scaleY = this.naturalHeight / rect.height;
+
+            // Calculate actual coordinates in the original image
+            const actualX = x * scaleX;
+            const actualY = y * scaleY;
+
+            // Calculate which tile was clicked in the original image
+            const tileX = Math.floor(actualX / tileSize);
+            const tileY = Math.floor(actualY / tileSize);
+
+            // Calculate displayed tile size
+            const displayedTileWidth = tileSize / scaleX;
+            const displayedTileHeight = tileSize / scaleY;
+
+            // Show selection rectangle scaled to displayed size
+            const selection = document.getElementById('tileSelection');
+            selection.style.display = 'block';
+            selection.style.left = (tileX * displayedTileWidth) + 'px';
+            selection.style.top = (tileY * displayedTileHeight) + 'px';
+            selection.style.width = displayedTileWidth + 'px';
+            selection.style.height = displayedTileHeight + 'px';
+
+            // Store selected tile info (using original image coordinates)
+            selectedTile = {
+                x: tileX * tileSize,
+                y: tileY * tileSize,
+                image: tilemapData
+            };
+
+            // Reset rotation when selecting a new tile
+            selectedTileRotation = 0;
+        });
+
+        // Right-click on tilemap to rotate selected tile
+        tilemapImage.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            if (selectedTile) {
+                selectedTileRotation = (selectedTileRotation + 90) % 360;
+            }
+        });
+
+        // Place tile on grid
+        function placeTile(cell, e) {
+            if (selectedTile && tilemapData) {
+                // Create a canvas to extract and rotate the selected tile
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = tileSize;
+                canvas.height = tileSize;
+
+                const img = new Image();
+                img.onload = function () {
+                    // Clear canvas
+                    ctx.clearRect(0, 0, tileSize, tileSize);
+
+                    // Apply rotation
+                    ctx.save();
+                    ctx.translate(tileSize / 2, tileSize / 2);
+                    ctx.rotate((selectedTileRotation * Math.PI) / 180);
+                    ctx.translate(-tileSize / 2, -tileSize / 2);
+
+                    // Draw the tile
+                    ctx.drawImage(img, selectedTile.x, selectedTile.y, tileSize, tileSize, 0, 0, tileSize, tileSize);
+                    ctx.restore();
+
+                    const tileDataUrl = canvas.toDataURL();
+                    cell.style.backgroundImage = `url(${tileDataUrl})`;
+                    cell.style.backgroundSize = 'cover';
+
+                    // Store tile data on the cell for rotation
+                    cell.tileData = {
+                        originalTile: selectedTile,
+                        rotation: selectedTileRotation,
+                        dataUrl: tileDataUrl
+                    };
+
+                    // Save to grid data
+                    const cellKey = `${cell.dataset.row}-${cell.dataset.col}`;
+                    gridData[cellKey] = cell.tileData;
+                };
+                img.src = tilemapData;
+            }
+        }
+
+        // Rotate tile on grid
+        function rotateTile(cell, e) {
+            e.preventDefault();
+            if (cell.tileData) {
+                // Update rotation
+                cell.tileData.rotation = (cell.tileData.rotation + 90) % 360;
+
+                // Recreate the rotated tile
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = tileSize;
+                canvas.height = tileSize;
+
+                const img = new Image();
+                img.onload = function () {
+                    // Clear canvas
+                    ctx.clearRect(0, 0, tileSize, tileSize);
+
+                    // Apply rotation
+                    ctx.save();
+                    ctx.translate(tileSize / 2, tileSize / 2);
+                    ctx.rotate((cell.tileData.rotation * Math.PI) / 180);
+                    ctx.translate(-tileSize / 2, -tileSize / 2);
+
+                    // Draw the tile
+                    ctx.drawImage(img, cell.tileData.originalTile.x, cell.tileData.originalTile.y, tileSize, tileSize, 0, 0, tileSize, tileSize);
+                    ctx.restore();
+
+                    const tileDataUrl = canvas.toDataURL();
+                    cell.style.backgroundImage = `url(${tileDataUrl})`;
+                    cell.tileData.dataUrl = tileDataUrl;
+
+                    // Update grid data
+                    const cellKey = `${cell.dataset.row}-${cell.dataset.col}`;
+                    gridData[cellKey] = cell.tileData;
+                };
+                img.src = cell.tileData.originalTile.image;
+            }
+        }
+
+        // Delete tile from grid
+        function deleteTile(cell) {
+            cell.style.backgroundImage = '';
+            cell.style.backgroundColor = '#333';
+            delete cell.tileData;
+
+            // Remove from grid data
+            const cellKey = `${cell.dataset.row}-${cell.dataset.col}`;
+            delete gridData[cellKey];
+        }
+
+        // Show tile preview on hover
+        function showTilePreview(cell) {
+            if (selectedTile && tilemapData && !cell.tileData) {
+                if (previewElement) {
+                    previewElement.remove();
+                }
+
+                previewElement = document.createElement('div');
+                previewElement.className = 'tile-preview';
+
+                // Create preview with current rotation
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = tileSize;
+                canvas.height = tileSize;
+
+                const img = new Image();
+                img.onload = function () {
+                    ctx.clearRect(0, 0, tileSize, tileSize);
+                    ctx.save();
+                    ctx.translate(tileSize / 2, tileSize / 2);
+                    ctx.rotate((selectedTileRotation * Math.PI) / 180);
+                    ctx.translate(-tileSize / 2, -tileSize / 2);
+                    ctx.drawImage(img, selectedTile.x, selectedTile.y, tileSize, tileSize, 0, 0, tileSize, tileSize);
+                    ctx.restore();
+
+                    const previewDataUrl = canvas.toDataURL();
+                    previewElement.style.backgroundImage = `url(${previewDataUrl})`;
+                };
+                img.src = tilemapData;
+
+                cell.appendChild(previewElement);
+            }
+        }
+
+        // Hide tile preview
+        function hideTilePreview(cell) {
+            if (previewElement) {
+                previewElement.remove();
+                previewElement = null;
+            }
+        }
+
+        // Toggle grid visibility
+        function toggleGrid() {
+            const showGrid = document.getElementById('showGrid').checked;
+            const cells = document.querySelectorAll('.grid-cell');
+            cells.forEach(cell => {
+                if (showGrid) {
+                    cell.classList.remove('no-grid');
+                } else {
+                    cell.classList.add('no-grid');
+                }
+            });
+        }
+
+        // Save grid data to current state
+        function saveGridData() {
+            const cells = document.querySelectorAll('.grid-cell');
+            cells.forEach(cell => {
+                if (cell.tileData) {
+                    const cellKey = `${cell.dataset.row}-${cell.dataset.col}`;
+                    gridData[cellKey] = cell.tileData;
+                }
+            });
+        }
+
+        // Save grid to JSON file
+        function saveGrid() {
+            saveGridData();
+
+            const saveData = {
+                gridWidth: gridWidth,
+                gridHeight: gridHeight,
+                tileSize: tileSize,
+                tilemapData: tilemapData,
+                gridData: gridData
+            };
+
+            const dataStr = JSON.stringify(saveData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = 'tilemap-grid.json';
+            link.click();
+        }
+
+        // Load grid from JSON file
+        function loadGrid() {
+            document.getElementById('loadFile').click();
+        }
+
+        function handleLoadFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const loadData = JSON.parse(e.target.result);
+
+                        // Restore settings
+                        gridWidth = loadData.gridWidth || 10;
+                        gridHeight = loadData.gridHeight || 10;
+                        tileSize = loadData.tileSize || 64;
+                        tilemapData = loadData.tilemapData;
+                        gridData = loadData.gridData || {};
+
+                        // Update UI
+                        document.getElementById('gridWidth').value = gridWidth;
+                        document.getElementById('gridHeight').value = gridHeight;
+                        document.getElementById('tileSize').value = tileSize;
+
+                        // Restore tilemap if it exists
+                        if (tilemapData) {
+                            tilemapImage.src = tilemapData;
+                            dropZone.classList.add('hidden');
+                            tilemapContainer.classList.remove('hidden');
+                        }
+
+                        // Recreate grid
+                        createGrid();
+
+                    } catch (error) {
+                        alert('Error loading file: Invalid JSON format');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // Restore tile to cell
+        function restoreTile(cell, tileData) {
+            if (tileData && tileData.dataUrl) {
+                cell.style.backgroundImage = `url(${tileData.dataUrl})`;
+                cell.tileData = tileData;
+            }
+        }
+
+        // Initialize the grid
+        createGrid();
+    </script>
+</body>
+
+</html>
