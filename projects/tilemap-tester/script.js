@@ -1,5 +1,5 @@
 // =============================================================================
-// TILEMAP EDITOR
+// TILEMAP EDITOR - OPTIMIZED WITH SINGLE CANVAS
 // =============================================================================
 
 class TilemapEditor {
@@ -7,14 +7,22 @@ class TilemapEditor {
         // State variables
         this.selectedTile = null;
         this.tilemapData = null;
+        this.tilemapImage = new Image();
         this.tileSize = 64;
         this.gridWidth = 10;
         this.gridHeight = 10;
         this.selectedTileRotation = 0;
-        this.previewElement = null;
         this.gridData = {};
         this.leftZoom = 1;
         this.rightZoom = 1;
+        this.isMouseDown = false;
+        this.lastPaintedCell = null;
+
+        // Canvas elements
+        this.canvas = null;
+        this.ctx = null;
+        this.overlayCanvas = null;
+        this.overlayCtx = null;
 
         // DOM elements
         this.elements = {
@@ -22,7 +30,7 @@ class TilemapEditor {
             tilemapContainer: document.getElementById('tilemapContainer'),
             tilemapImage: document.getElementById('tilemapImage'),
             tileSelection: document.getElementById('tileSelection'),
-            grid: document.getElementById('grid'),
+            gridContainer: document.getElementById('grid'),
             tileSizeInput: document.getElementById('tileSize'),
             gridWidthInput: document.getElementById('gridWidth'),
             gridHeightInput: document.getElementById('gridHeight'),
@@ -35,7 +43,76 @@ class TilemapEditor {
 
     init() {
         this.setupEventListeners();
-        this.createGrid();
+        this.createCanvas();
+        this.setupTilemapImage();
+    }
+
+    // =============================================================================
+    // CANVAS SETUP
+    // =============================================================================
+
+    createCanvas() {
+        const { gridContainer } = this.elements;
+
+        // Clear existing content
+        gridContainer.innerHTML = '';
+
+        // Create main canvas
+        this.canvas = document.createElement('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.className = 'tilemap-canvas';
+
+        // Create overlay canvas for grid lines and previews
+        this.overlayCanvas = document.createElement('canvas');
+        this.overlayCtx = this.overlayCanvas.getContext('2d');
+        this.overlayCanvas.className = 'tilemap-overlay';
+
+        // Set up canvas container
+        const canvasContainer = document.createElement('div');
+        canvasContainer.className = 'canvas-container';
+        canvasContainer.style.position = 'relative';
+        canvasContainer.style.display = 'inline-block';
+
+        this.updateCanvasSize();
+
+        // Add canvases to container
+        canvasContainer.appendChild(this.canvas);
+        canvasContainer.appendChild(this.overlayCanvas);
+        gridContainer.appendChild(canvasContainer);
+
+        this.setupCanvasEventListeners();
+        this.drawGrid();
+    }
+
+    updateCanvasSize() {
+        const width = this.gridWidth * this.tileSize;
+        const height = this.gridHeight * this.tileSize;
+
+        // Update main canvas
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+
+        // Update overlay canvas
+        this.overlayCanvas.width = width;
+        this.overlayCanvas.height = height;
+        this.overlayCanvas.style.width = width + 'px';
+        this.overlayCanvas.style.height = height + 'px';
+        this.overlayCanvas.style.position = 'absolute';
+        this.overlayCanvas.style.top = '0';
+        this.overlayCanvas.style.left = '0';
+        this.overlayCanvas.style.pointerEvents = 'none';
+
+        // Set canvas background
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(0, 0, width, height);
+    }
+
+    setupTilemapImage() {
+        this.tilemapImage.onload = () => {
+            this.redrawCanvas();
+        };
     }
 
     // =============================================================================
@@ -46,6 +123,17 @@ class TilemapEditor {
         this.setupDragAndDrop();
         this.setupTilemapSelection();
         this.setupGridControls();
+    }
+
+    setupCanvasEventListeners() {
+        // Mouse events for tile placement
+        this.overlayCanvas.style.pointerEvents = 'auto';
+
+        this.overlayCanvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.overlayCanvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.overlayCanvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        this.overlayCanvas.addEventListener('mouseleave', (e) => this.handleMouseLeave(e));
+        this.overlayCanvas.addEventListener('contextmenu', (e) => this.handleRightClick(e));
     }
 
     setupDragAndDrop() {
@@ -93,77 +181,71 @@ class TilemapEditor {
     }
 
     // =============================================================================
-    // GRID MANAGEMENT
+    // MOUSE HANDLING
     // =============================================================================
 
-    createGrid() {
-        const { grid } = this.elements;
-        grid.innerHTML = '';
+    handleMouseDown(e) {
+        this.isMouseDown = true;
+        this.lastPaintedCell = null;
 
-        for (let row = 0; row < this.gridHeight; row++) {
-            const gridRow = this.createGridRow(row);
-            grid.appendChild(gridRow);
+        if (e.button === 0) { // Left click
+            this.handleCanvasClick(e);
+        } else if (e.button === 1) { // Middle click
+            e.preventDefault();
+            this.handleMiddleClick(e);
         }
     }
 
-    createGridRow(row) {
-        const gridRow = document.createElement('div');
-        gridRow.className = 'grid-row';
-
-        for (let col = 0; col < this.gridWidth; col++) {
-            const cell = this.createGridCell(row, col);
-            gridRow.appendChild(cell);
+    handleMouseMove(e) {
+        if (this.isMouseDown && e.buttons === 1) { // Left button held down
+            this.handleCanvasClick(e);
+        } else {
+            this.showTilePreview(e);
         }
-
-        return gridRow;
     }
 
-    createGridCell(row, col) {
-        const cell = document.createElement('div');
-        cell.className = 'grid-cell';
-        cell.style.width = this.tileSize + 'px';
-        cell.style.height = this.tileSize + 'px';
-        cell.dataset.row = row;
-        cell.dataset.col = col;
-
-        this.attachCellEventListeners(cell);
-        this.restoreCellData(cell, row, col);
-
-        return cell;
+    handleMouseUp(e) {
+        this.isMouseDown = false;
+        this.lastPaintedCell = null;
     }
 
-    attachCellEventListeners(cell) {
-        cell.addEventListener('click', (e) => this.placeTile(cell, e));
-        cell.addEventListener('contextmenu', (e) => this.rotateTile(cell, e));
-        cell.addEventListener('mousedown', (e) => {
-            if (e.button === 1) { // Middle mouse button
-                e.preventDefault();
-                this.deleteTile(cell);
-            }
-        });
-        cell.addEventListener('mouseenter', () => this.showTilePreview(cell));
-        cell.addEventListener('mouseleave', () => this.hideTilePreview());
+    handleMouseLeave(e) {
+        this.isMouseDown = false;
+        this.lastPaintedCell = null;
+        this.hideTilePreview();
     }
 
-    restoreCellData(cell, row, col) {
+    handleRightClick(e) {
+        e.preventDefault();
+        const { row, col } = this.getGridPosition(e);
+        this.rotateTileAtPosition(row, col);
+    }
+
+    handleCanvasClick(e) {
+        const { row, col } = this.getGridPosition(e);
         const cellKey = `${row}-${col}`;
-        if (this.gridData[cellKey]) {
-            this.restoreTile(cell, this.gridData[cellKey]);
-        }
+
+        // Avoid painting the same cell multiple times in one drag
+        if (this.lastPaintedCell === cellKey) return;
+        this.lastPaintedCell = cellKey;
+
+        this.placeTileAtPosition(row, col);
     }
 
-    updateGrid() {
-        this.saveGridData();
-        this.updateGridSettings();
-        this.createGrid();
+    handleMiddleClick(e) {
+        const { row, col } = this.getGridPosition(e);
+        this.deleteTileAtPosition(row, col);
     }
 
-    updateGridSettings() {
-        const { tileSizeInput, gridWidthInput, gridHeightInput } = this.elements;
+    getGridPosition(e) {
+        const rect = this.overlayCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-        this.tileSize = parseInt(tileSizeInput.value);
-        this.gridWidth = parseInt(gridWidthInput.value);
-        this.gridHeight = parseInt(gridHeightInput.value);
+        const col = Math.floor(x / this.tileSize);
+        const row = Math.floor(y / this.tileSize);
+
+        return { row, col };
     }
 
     // =============================================================================
@@ -213,8 +295,7 @@ class TilemapEditor {
     setSelectedTile(coords) {
         this.selectedTile = {
             x: coords.tileX * this.tileSize,
-            y: coords.tileY * this.tileSize,
-            image: this.tilemapData
+            y: coords.tileY * this.tileSize
         };
         this.selectedTileRotation = 0;
     }
@@ -226,125 +307,178 @@ class TilemapEditor {
         }
     }
 
-    placeTile(cell, e) {
-        if (!this.selectedTile || !this.tilemapData) return;
+    placeTileAtPosition(row, col) {
+        if (!this.selectedTile || !this.tilemapData || row < 0 || col < 0 ||
+            row >= this.gridHeight || col >= this.gridWidth) return;
 
-        this.renderTileToCell(cell, this.selectedTile, this.selectedTileRotation)
-            .then(tileDataUrl => {
-                this.updateCellAppearance(cell, tileDataUrl);
-                this.storeTileData(cell, tileDataUrl);
-            });
+        const cellKey = `${row}-${col}`;
+
+        // Store tile data
+        this.gridData[cellKey] = {
+            x: this.selectedTile.x,
+            y: this.selectedTile.y,
+            rotation: this.selectedTileRotation
+        };
+
+        // Draw tile to canvas
+        this.drawTileToCanvas(col, row, this.selectedTile.x, this.selectedTile.y, this.selectedTileRotation);
     }
 
-    rotateTile(cell, e) {
-        e.preventDefault();
-        if (!cell.tileData) return;
+    rotateTileAtPosition(row, col) {
+        if (row < 0 || col < 0 || row >= this.gridHeight || col >= this.gridWidth) return;
 
-        cell.tileData.rotation = (cell.tileData.rotation + 90) % 360;
+        const cellKey = `${row}-${col}`;
+        const tileData = this.gridData[cellKey];
 
-        this.renderTileToCell(cell, cell.tileData.originalTile, cell.tileData.rotation)
-            .then(tileDataUrl => {
-                this.updateCellAppearance(cell, tileDataUrl);
-                cell.tileData.dataUrl = tileDataUrl;
-                this.updateGridData(cell);
-            });
+        if (!tileData) return;
+
+        // Update rotation
+        tileData.rotation = (tileData.rotation + 90) % 360;
+
+        // Redraw tile
+        this.drawTileToCanvas(col, row, tileData.x, tileData.y, tileData.rotation);
     }
 
-    deleteTile(cell) {
-        cell.style.backgroundImage = '';
-        cell.style.backgroundColor = '#333';
-        delete cell.tileData;
+    deleteTileAtPosition(row, col) {
+        if (row < 0 || col < 0 || row >= this.gridHeight || col >= this.gridWidth) return;
 
-        const cellKey = `${cell.dataset.row}-${cell.dataset.col}`;
+        const cellKey = `${row}-${col}`;
         delete this.gridData[cellKey];
+
+        // Clear tile area
+        this.clearTileArea(col, row);
     }
 
     // =============================================================================
-    // CANVAS OPERATIONS
+    // CANVAS DRAWING
     // =============================================================================
 
-    async renderTileToCell(cell, tile, rotation) {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = this.tileSize;
-            canvas.height = this.tileSize;
+    drawTileToCanvas(gridX, gridY, tileX, tileY, rotation) {
+        if (!this.tilemapImage.complete) return;
 
-            const img = new Image();
-            img.onload = () => {
-                this.drawRotatedTile(ctx, img, tile, rotation);
-                resolve(canvas.toDataURL());
-            };
-            img.src = tile.image;
+        const x = gridX * this.tileSize;
+        const y = gridY * this.tileSize;
+
+        // Clear the area first
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(x, y, this.tileSize, this.tileSize);
+
+        // Draw rotated tile
+        this.ctx.save();
+        this.ctx.translate(x + this.tileSize / 2, y + this.tileSize / 2);
+        this.ctx.rotate((rotation * Math.PI) / 180);
+        this.ctx.drawImage(
+            this.tilemapImage,
+            tileX, tileY, this.tileSize, this.tileSize,
+            -this.tileSize / 2, -this.tileSize / 2, this.tileSize, this.tileSize
+        );
+        this.ctx.restore();
+    }
+
+    clearTileArea(gridX, gridY) {
+        const x = gridX * this.tileSize;
+        const y = gridY * this.tileSize;
+
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(x, y, this.tileSize, this.tileSize);
+    }
+
+    redrawCanvas() {
+        // Clear canvas
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Redraw all tiles
+        Object.entries(this.gridData).forEach(([cellKey, tileData]) => {
+            const [row, col] = cellKey.split('-').map(Number);
+            this.drawTileToCanvas(col, row, tileData.x, tileData.y, tileData.rotation);
         });
     }
 
-    drawRotatedTile(ctx, img, tile, rotation) {
-        ctx.clearRect(0, 0, this.tileSize, this.tileSize);
-        ctx.save();
-        ctx.translate(this.tileSize / 2, this.tileSize / 2);
-        ctx.rotate((rotation * Math.PI) / 180);
-        ctx.translate(-this.tileSize / 2, -this.tileSize / 2);
-        ctx.drawImage(img, tile.x, tile.y, this.tileSize, this.tileSize, 0, 0, this.tileSize, this.tileSize);
-        ctx.restore();
+    drawGrid() {
+        this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+
+        if (!this.elements.showGridCheckbox.checked) return;
+
+        this.overlayCtx.strokeStyle = '#666';
+        this.overlayCtx.lineWidth = 1;
+        this.overlayCtx.beginPath();
+
+        // Vertical lines
+        for (let i = 0; i <= this.gridWidth; i++) {
+            const x = i * this.tileSize + 0.5;
+            this.overlayCtx.moveTo(x, 0);
+            this.overlayCtx.lineTo(x, this.canvas.height);
+        }
+
+        // Horizontal lines
+        for (let i = 0; i <= this.gridHeight; i++) {
+            const y = i * this.tileSize + 0.5;
+            this.overlayCtx.moveTo(0, y);
+            this.overlayCtx.lineTo(this.canvas.width, y);
+        }
+
+        this.overlayCtx.stroke();
     }
 
     // =============================================================================
     // PREVIEW FUNCTIONALITY
     // =============================================================================
 
-    showTilePreview(cell) {
-        if (!this.selectedTile || !this.tilemapData || cell.tileData || this.previewElement) return;
+    showTilePreview(e) {
+        if (!this.selectedTile || !this.tilemapImage.complete || this.isMouseDown) return;
 
-        this.previewElement = document.createElement('div');
-        this.previewElement.className = 'tile-preview';
+        const { row, col } = this.getGridPosition(e);
+        const cellKey = `${row}-${col}`;
 
-        this.renderTileToCell(cell, this.selectedTile, this.selectedTileRotation)
-            .then(previewDataUrl => {
-                if (this.previewElement) {
-                    this.previewElement.style.backgroundImage = `url(${previewDataUrl})`;
-                    cell.appendChild(this.previewElement);
-                }
-            });
+        // Don't show preview if tile already exists at this position
+        if (this.gridData[cellKey]) return;
+
+        // Clear previous preview
+        this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+        this.drawGrid();
+
+        // Draw preview
+        const x = col * this.tileSize;
+        const y = row * this.tileSize;
+
+        this.overlayCtx.save();
+        this.overlayCtx.globalAlpha = 0.5;
+        this.overlayCtx.translate(x + this.tileSize / 2, y + this.tileSize / 2);
+        this.overlayCtx.rotate((this.selectedTileRotation * Math.PI) / 180);
+        this.overlayCtx.drawImage(
+            this.tilemapImage,
+            this.selectedTile.x, this.selectedTile.y, this.tileSize, this.tileSize,
+            -this.tileSize / 2, -this.tileSize / 2, this.tileSize, this.tileSize
+        );
+        this.overlayCtx.restore();
     }
 
     hideTilePreview() {
-        if (this.previewElement) {
-            this.previewElement.remove();
-            this.previewElement = null;
-        }
+        this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+        this.drawGrid();
     }
 
     // =============================================================================
-    // DATA MANAGEMENT
+    // GRID MANAGEMENT
     // =============================================================================
 
-    updateCellAppearance(cell, tileDataUrl) {
-        cell.style.backgroundImage = `url(${tileDataUrl})`;
-        cell.style.backgroundSize = 'cover';
+    updateGrid() {
+        this.updateGridSettings();
+        this.createCanvas();
+        this.redrawCanvas();
     }
 
-    storeTileData(cell, tileDataUrl) {
-        cell.tileData = {
-            originalTile: { ...this.selectedTile },
-            rotation: this.selectedTileRotation,
-            dataUrl: tileDataUrl
-        };
-        this.updateGridData(cell);
+    updateGridSettings() {
+        const { tileSizeInput, gridWidthInput, gridHeightInput } = this.elements;
+
+        this.tileSize = parseInt(tileSizeInput.value);
+        this.gridWidth = parseInt(gridWidthInput.value);
+        this.gridHeight = parseInt(gridHeightInput.value);
     }
 
-    updateGridData(cell) {
-        const cellKey = `${cell.dataset.row}-${cell.dataset.col}`;
-        this.gridData[cellKey] = cell.tileData;
-    }
-
-    saveGridData() {
-        const cells = document.querySelectorAll('.grid-cell');
-        cells.forEach(cell => {
-            if (cell.tileData) {
-                this.updateGridData(cell);
-            }
-        });
+    toggleGrid() {
+        this.drawGrid();
     }
 
     // =============================================================================
@@ -371,58 +505,29 @@ class TilemapEditor {
 
         tilemapImage.src = imageSrc;
         this.tilemapData = imageSrc;
+        this.tilemapImage.src = imageSrc;
+
         dropZone.style.display = 'none';
         tilemapContainer.style.display = 'block';
-        this.updateAllTilesWithNewSpritesheet(imageSrc);
-    }
 
-    updateAllTilesWithNewSpritesheet(newSpritesheetData) {
-        this.tilemapData = newSpritesheetData;
-        const cells = document.querySelectorAll('.grid-cell');
-
-        cells.forEach(cell => {
-            if (cell.tileData) {
-                this.updateCellWithNewSpritesheet(cell, newSpritesheetData);
-            }
-        });
-    }
-
-    updateCellWithNewSpritesheet(cell, newSpritesheetData) {
-        const updatedTile = { ...cell.tileData.originalTile, image: newSpritesheetData };
-
-        this.renderTileToCell(cell, updatedTile, cell.tileData.rotation)
-            .then(tileDataUrl => {
-                this.updateCellAppearance(cell, tileDataUrl);
-                cell.tileData.dataUrl = tileDataUrl;
-                cell.tileData.originalTile.image = newSpritesheetData;
-            });
+        // Redraw canvas when new image loads
+        this.tilemapImage.onload = () => {
+            this.redrawCanvas();
+        };
     }
 
     saveGrid() {
-        this.saveGridData();
         const saveData = this.prepareSaveData();
         this.downloadJSON(saveData, 'tilemap-grid.json');
     }
 
     prepareSaveData() {
-        const simplifiedGridData = {};
-
-        Object.entries(this.gridData).forEach(([key, data]) => {
-            if (data) {
-                simplifiedGridData[key] = {
-                    x: data.originalTile.x,
-                    y: data.originalTile.y,
-                    rotation: data.rotation
-                };
-            }
-        });
-
         return {
             gridWidth: this.gridWidth,
             gridHeight: this.gridHeight,
             tileSize: this.tileSize,
             tilemapData: this.tilemapData,
-            gridData: simplifiedGridData
+            gridData: this.gridData
         };
     }
 
@@ -466,7 +571,15 @@ class TilemapEditor {
 
         this.updateUI();
         this.restoreTilemap();
-        this.createGrid();
+        this.createCanvas();
+
+        // Load tilemap image and redraw
+        if (this.tilemapData) {
+            this.tilemapImage.src = this.tilemapData;
+            this.tilemapImage.onload = () => {
+                this.redrawCanvas();
+            };
+        }
     }
 
     updateUI() {
@@ -488,39 +601,6 @@ class TilemapEditor {
             dropZone.style.display = 'flex';
             tilemapContainer.style.display = 'none';
         }
-    }
-
-    restoreTile(cell, tileData) {
-        if (!tileData || !this.tilemapData) return;
-
-        const tile = {
-            x: tileData.x,
-            y: tileData.y,
-            image: this.tilemapData
-        };
-
-        this.renderTileToCell(cell, tile, tileData.rotation)
-            .then(tileDataUrl => {
-                this.updateCellAppearance(cell, tileDataUrl);
-                cell.tileData = {
-                    originalTile: tile,
-                    rotation: tileData.rotation,
-                    dataUrl: tileDataUrl
-                };
-            });
-    }
-
-    // =============================================================================
-    // UI CONTROLS
-    // =============================================================================
-
-    toggleGrid() {
-        const showGrid = this.elements.showGridCheckbox.checked;
-        const cells = document.querySelectorAll('.grid-cell');
-
-        cells.forEach(cell => {
-            cell.classList.toggle('no-grid', !showGrid);
-        });
     }
 }
 
