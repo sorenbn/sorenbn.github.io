@@ -134,6 +134,9 @@ class TilemapEditor {
         this.overlayCanvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.overlayCanvas.addEventListener('mouseleave', (e) => this.handleMouseLeave(e));
         this.overlayCanvas.addEventListener('contextmenu', (e) => this.handleRightClick(e));
+
+        // Keyboard events for rotating preview
+        document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
 
     setupDragAndDrop() {
@@ -218,7 +221,39 @@ class TilemapEditor {
     handleRightClick(e) {
         e.preventDefault();
         const { row, col } = this.getGridPosition(e);
-        this.rotateTileAtPosition(row, col);
+
+        // If there's a tile at this position, rotate it
+        const cellKey = `${row}-${col}`;
+        if (this.gridData[cellKey]) {
+            this.rotateTileAtPosition(row, col);
+        } else if (this.selectedTile) {
+            // If no tile exists, rotate the preview
+            this.selectedTileRotation = (this.selectedTileRotation + 90) % 360;
+            this.showTilePreview(e); // Update preview with new rotation
+        }
+    }
+
+    handleKeyDown(e) {
+        // Rotate preview with R key or Space
+        if ((e.key === 'r' || e.key === 'R' || e.key === ' ') && this.selectedTile) {
+            e.preventDefault();
+            this.selectedTileRotation = (this.selectedTileRotation + 90) % 360;
+
+            // If mouse is over the canvas, update preview
+            const canvasRect = this.overlayCanvas.getBoundingClientRect();
+            const mouseX = e.clientX || 0;
+            const mouseY = e.clientY || 0;
+
+            // Create synthetic mouse event to update preview if mouse is over canvas
+            if (mouseX >= canvasRect.left && mouseX <= canvasRect.right &&
+                mouseY >= canvasRect.top && mouseY <= canvasRect.bottom) {
+                const syntheticEvent = {
+                    clientX: mouseX - canvasRect.left + canvasRect.left,
+                    clientY: mouseY - canvasRect.top + canvasRect.top
+                };
+                this.showTilePreview(syntheticEvent);
+            }
+        }
     }
 
     handleCanvasClick(e) {
@@ -304,6 +339,21 @@ class TilemapEditor {
         e.preventDefault();
         if (this.selectedTile) {
             this.selectedTileRotation = (this.selectedTileRotation + 90) % 360;
+
+            // Update preview if mouse is currently over the grid
+            const canvasRect = this.overlayCanvas.getBoundingClientRect();
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            // Check if mouse is over the canvas area
+            if (mouseX >= canvasRect.left && mouseX <= canvasRect.right &&
+                mouseY >= canvasRect.top && mouseY <= canvasRect.bottom) {
+                const syntheticEvent = {
+                    clientX: mouseX,
+                    clientY: mouseY
+                };
+                this.showTilePreview(syntheticEvent);
+            }
         }
     }
 
@@ -429,16 +479,15 @@ class TilemapEditor {
         if (!this.selectedTile || !this.tilemapImage.complete || this.isMouseDown) return;
 
         const { row, col } = this.getGridPosition(e);
-        const cellKey = `${row}-${col}`;
 
-        // Don't show preview if tile already exists at this position
-        if (this.gridData[cellKey]) return;
+        // Check if position is valid
+        if (row < 0 || col < 0 || row >= this.gridHeight || col >= this.gridWidth) return;
 
         // Clear previous preview
         this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
         this.drawGrid();
 
-        // Draw preview
+        // Draw preview (always show, even over existing tiles)
         const x = col * this.tileSize;
         const y = row * this.tileSize;
 
