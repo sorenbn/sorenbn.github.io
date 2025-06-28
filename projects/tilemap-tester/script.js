@@ -1,5 +1,5 @@
 // =============================================================================
-// TILEMAP EDITOR - OPTIMIZED WITH SINGLE CANVAS
+// TILEMAP EDITOR - OPTIMIZED WITH SINGLE CANVAS + PNG EXPORT
 // =============================================================================
 
 class TilemapEditor {
@@ -180,6 +180,7 @@ class TilemapEditor {
         window.toggleGrid = () => this.toggleGrid();
         window.saveGrid = () => this.saveGrid();
         window.loadGrid = () => this.loadGrid();
+        window.exportPNG = () => this.exportPNG();
         window.handleLoadFile = (event) => this.handleLoadFile(event);
     }
 
@@ -528,6 +529,61 @@ class TilemapEditor {
 
     toggleGrid() {
         this.drawGrid();
+    }
+
+    // =============================================================================
+    // PNG EXPORT FUNCTIONALITY
+    // =============================================================================
+
+    exportPNG() {
+        if (!this.tilemapImage.complete) {
+            alert('No tilemap image loaded!');
+            return;
+        }
+
+        // Check if there are any tiles placed
+        if (Object.keys(this.gridData).length === 0) {
+            alert('No tiles placed on the grid to export!');
+            return;
+        }
+
+        // Create a temporary canvas for export
+        const exportCanvas = document.createElement('canvas');
+        const exportCtx = exportCanvas.getContext('2d');
+
+        // Set canvas size to match the grid
+        exportCanvas.width = this.gridWidth * this.tileSize;
+        exportCanvas.height = this.gridHeight * this.tileSize;
+
+        // Clear canvas with transparent background
+        exportCtx.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+        // Draw only the tiles (without background)
+        Object.entries(this.gridData).forEach(([cellKey, tileData]) => {
+            const [row, col] = cellKey.split('-').map(Number);
+            const x = col * this.tileSize;
+            const y = row * this.tileSize;
+
+            // Draw rotated tile
+            exportCtx.save();
+            exportCtx.translate(x + this.tileSize / 2, y + this.tileSize / 2);
+            exportCtx.rotate((tileData.rotation * Math.PI) / 180);
+            exportCtx.drawImage(
+                this.tilemapImage,
+                tileData.x, tileData.y, this.tileSize, this.tileSize,
+                -this.tileSize / 2, -this.tileSize / 2, this.tileSize, this.tileSize
+            );
+            exportCtx.restore();
+        });
+
+        // Convert canvas to blob and download
+        exportCanvas.toBlob((blob) => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `tilemap-${this.gridWidth}x${this.gridHeight}-${Date.now()}.png`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }, 'image/png');
     }
 
     // =============================================================================

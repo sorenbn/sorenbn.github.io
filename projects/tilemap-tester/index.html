@@ -57,7 +57,12 @@
             <button onclick="saveGrid()"
                 style="padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer;">Save</button>
             <button onclick="loadGrid()"
-                style="padding: 5px 10px; background: #FF9800; color: white; border: none; border-radius: 3px; cursor: pointer;">Load</button>
+                style="padding: 5px 10px; background: #FF9800; color: white; border: none; border-radius: 3px; cursor: pointer;">Load
+            </button>
+            <button onclick="exportPNG()"
+                style="padding: 5px 10px; background: #9500ff; color: white; border: none; border-radius: 3px; cursor: pointer;">Export
+                PNG
+            </button>
             <input type="file" id="loadFile" accept=".json" style="display: none;" onchange="handleLoadFile(event)">
         </div>
     </div>
