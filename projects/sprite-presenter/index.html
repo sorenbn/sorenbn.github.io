@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Sprite Sheet Presenter</title>
+    <style>
+        :root {
+            --bg: #18181b;
+            --panel: #27272a;
+            --text: #f4f4f5;
+            --accent: #06b6d4;
+            --border: #3f3f46;
+        }
+
+        body {
+            font-family: "Inter", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            gap: 24px;
+        }
+
+        h2 {
+            font-weight: 600;
+            margin: 0;
+            color: var(--accent);
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 24px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 260px;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #d4d4d8;
+        }
+
+        input[type="number"],
+        input[type="file"],
+        input[type="color"] {
+            background: #1f1f22;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 6px;
+            width: 90px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+        }
+
+        button {
+            background: var(--accent);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background: #0ea5e9;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        .preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1f1f22;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        canvas {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background: #111;
+        }
+
+        footer {
+            font-size: 12px;
+            opacity: 0.5;
+        }
+
+        @media (max-width:600px) {
+            .app-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .panel {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h2>🎞 Sprite Sheet Presenter</h2>
+
+    <div class="app-container">
+        <div class="panel">
+            <input type="file" id="fileInput" accept="image/*">
+
+            <label>Frame Width <input type="number" id="frameWidth" value="32"></label>
+            <label>Frame Height <input type="number" id="frameHeight" value="32"></label>
+            <label>Total Frames <input type="number" id="frameCount" value="8"></label>
+            <label>FPS <input type="number" id="fps" value="12"></label>
+            <label>Scale <input type="number" id="scale" value="8"></label>
+            <label>Reflection Offset <input type="number" id="offsetY" value="0"></label>
+            <label>Reflection Opacity <input type="number" id="reflectionOpacity" step="0.1" min="0" max="1"
+                    value="0.2"></label>
+            <label>Background Color <input type="color" id="bgColor" value="#111111"></label>
+            <label>Canvas Width <input type="number" id="canvasWidth" value="600"></label>
+            <label>Canvas Height <input type="number" id="canvasHeight" value="600"></label>
+
+            <button id="startBtn">Play Animation</button>
+            <button id="exportBtn">Export as GIF</button>
+        </div>
+
+        <div class="preview">
+            <canvas id="canvas" width="600" height="600"></canvas>
+        </div>
+    </div>
+
+    <footer>Pixel-perfect preview • Reflection opacity + custom background</footer>
+
+    <script src="gif.js.optimized.min.js"></script>
+    <script>
+        const fileInput = document.getElementById("fileInput");
+        const startBtn = document.getElementById("startBtn");
+        const exportBtn = document.getElementById("exportBtn");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+
+        let image = null;
+        let frameWidth = 32, frameHeight = 32, frameCount = 8, fps = 12;
+        let scale = 8, offsetY = 0, reflectionOpacity = 0.2, bgColor = "#111111";
+        let canvasWidth = 600, canvasHeight = 600;
+        let currentFrame = 0, lastTime = 0;
+        let animating = false;
+
+        fileInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const img = new Image();
+            img.onload = () => (image = img);
+            img.src = URL.createObjectURL(file);
+        });
+
+        document.getElementById("bgColor").addEventListener("input", (e) => {
+            bgColor = e.target.value;
+            canvas.style.background = bgColor;
+        });
+
+        startBtn.addEventListener("click", () => {
+            updateValues();
+            prepareCanvas();
+            animating = true;
+            lastTime = performance.now();
+            requestAnimationFrame(loop);
+        });
+
+        function updateValues() {
+            frameWidth = parseInt(document.getElementById("frameWidth").value);
+            frameHeight = parseInt(document.getElementById("frameHeight").value);
+            frameCount = parseInt(document.getElementById("frameCount").value);
+            fps = parseInt(document.getElementById("fps").value);
+            scale = parseInt(document.getElementById("scale").value);
+            offsetY = parseInt(document.getElementById("offsetY").value);
+            reflectionOpacity = parseFloat(document.getElementById("reflectionOpacity").value);
+            bgColor = document.getElementById("bgColor").value;
+            canvasWidth = parseInt(document.getElementById("canvasWidth").value);
+            canvasHeight = parseInt(document.getElementById("canvasHeight").value);
+        }
+
+        function prepareCanvas() {
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            canvas.style.background = bgColor;
+            ctx.imageSmoothingEnabled = false;
+        }
+
+        function drawFrame(frameIndex) {
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const framesPerRow = Math.floor(image.width / frameWidth);
+            const sx = (frameIndex % framesPerRow) * frameWidth;
+            const sy = Math.floor(frameIndex / framesPerRow) * frameHeight;
+
+            const scaledW = frameWidth * scale;
+            const scaledH = frameHeight * scale;
+            const scaledOffset = offsetY * scale;
+
+            const x = (canvas.width - scaledW) / 2;
+            const y = (canvas.height - scaledH * 2 - scaledOffset) / 2;
+
+            // main sprite
+            ctx.globalAlpha = 1;
+            ctx.drawImage(image, sx, sy, frameWidth, frameHeight, x, y, scaledW, scaledH);
+
+            // reflection
+            ctx.save();
+            ctx.scale(1, -1);
+            ctx.globalAlpha = reflectionOpacity;
+            ctx.drawImage(image, sx, sy, frameWidth, frameHeight, x, -(y + scaledH * 2 + scaledOffset), scaledW, scaledH);
+            ctx.restore();
+            ctx.globalAlpha = 1;
+        }
+
+        function loop(timestamp) {
+            if (!animating || !image) return;
+            const frameDuration = 1000 / fps;
+            if (timestamp - lastTime >= frameDuration) {
+                lastTime = timestamp;
+                drawFrame(currentFrame);
+                currentFrame = (currentFrame + 1) % frameCount;
+            }
+            requestAnimationFrame(loop);
+        }
+
+        exportBtn.addEventListener("click", () => {
+            if (!image) return alert("Upload a spritesheet first!");
+            updateValues();
+            prepareCanvas();
+
+            const gif = new GIF({
+                workers: 2,
+                quality: 10,
+                workerScript: 'gif.worker.js',
+                width: canvas.width,
+                height: canvas.height
+            });
+
+            const delay = 1000 / fps;
+
+            for (let i = 0; i < frameCount; i++) {
+                drawFrame(i);
+                gif.addFrame(ctx, { copy: true, delay });
+            }
+
+            gif.on('finished', function (blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'sprite_preview.gif';
+                a.click();
+            });
+
+            gif.render();
+        });
+    </script>
+</body>
+
+</html>
