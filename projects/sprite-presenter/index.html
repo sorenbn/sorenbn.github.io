@@ -3,163 +3,433 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>Sprite Sheet Presenter</title>
+    <title>Sprite Sheet Animator</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         :root {
-            --bg: #18181b;
-            --panel: #27272a;
-            --text: #f4f4f5;
-            --accent: #06b6d4;
-            --border: #3f3f46;
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #13131a;
+            --bg-tertiary: #1a1a24;
+            --accent-primary: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-light: #818cf8;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #2d2d3a;
+            --glow: rgba(99, 102, 241, 0.3);
         }
 
         body {
-            font-family: "Inter", sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a24 100%);
+            color: var(--text-primary);
             min-height: 100vh;
-            margin: 0;
-            gap: 24px;
+            padding: 2rem 1rem;
+            position: relative;
+            overflow-x: hidden;
         }
 
-        h2 {
-            font-weight: 600;
-            margin: 0;
-            color: var(--accent);
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 0;
+            pointer-events: none;
         }
 
-        .app-container {
-            display: flex;
-            flex-direction: row;
-            align-items: flex-start;
-            justify-content: center;
-            gap: 24px;
-            background: var(--panel);
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 2rem;
+            animation: slideUp 0.6s ease-out 0.2s both;
+        }
+
+        .controls-panel {
+            background: var(--bg-secondary);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px 24px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            height: fit-content;
         }
 
-        .panel {
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-light);
+            margin-bottom: 1rem;
             display: flex;
-            flex-direction: column;
-            gap: 12px;
-            width: 260px;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 3px;
+            height: 16px;
+            background: var(--accent-primary);
+            border-radius: 2px;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            cursor: pointer;
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.6;
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
         }
 
         label {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            color: #d4d4d8;
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
         }
 
         input[type="number"],
-        input[type="file"],
         input[type="color"] {
-            background: #1f1f22;
-            color: var(--text);
+            width: 100%;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 4px 6px;
-            width: 90px;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
         }
 
-        input[type="file"] {
-            width: 100%;
+        input[type="number"]:focus,
+        input[type="color"]:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--glow);
+        }
+
+        input[type="color"] {
+            height: 45px;
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
         }
 
         button {
-            background: var(--accent);
+            width: 100%;
+            background: var(--accent-primary);
             border: none;
             color: white;
             font-weight: 600;
-            padding: 8px 12px;
-            border-radius: 8px;
+            padding: 0.875rem 1.5rem;
+            border-radius: 10px;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            font-size: 0.9375rem;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        button:hover::before {
+            width: 300px;
+            height: 300px;
         }
 
         button:hover {
-            background: #0ea5e9;
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px var(--glow);
         }
 
         button:active {
-            transform: scale(0.97);
+            transform: translateY(0);
         }
 
-        .preview {
+        button.secondary {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+
+        button.secondary:hover {
+            background: var(--bg-secondary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #1f1f22;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px;
+            min-height: 600px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .preview-container::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 20px;
+            padding: 1px;
+            background: linear-gradient(135deg, var(--accent-primary), transparent);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.3;
         }
 
         canvas {
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 12px;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
-            background: #111;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
         }
 
-        footer {
-            font-size: 12px;
-            opacity: 0.5;
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
         }
 
-        @media (max-width:600px) {
-            .app-container {
-                flex-direction: column;
-                align-items: center;
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
             }
 
-            .panel {
-                width: 100%;
-                max-width: 300px;
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .controls-panel {
+                padding: 1.5rem;
+            }
+
+            .grid-2col {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 
 <body>
-    <h2>🎞 Sprite Sheet Presenter</h2>
+    <div class="container">
+        <header>
+            <h1>🎞 Sprite Sheet Animator</h1>
+            <p class="subtitle">Create stunning animated previews with reflections</p>
+        </header>
 
-    <div class="app-container">
-        <div class="panel">
-            <input type="file" id="fileInput" accept="image/*">
+        <div class="main-grid">
+            <div class="controls-panel">
+                <div class="section">
+                    <div class="section-title">Upload</div>
+                    <div class="upload-zone">
+                        <input type="file" id="fileInput" accept="image/*">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">Click or drag sprite sheet here</div>
+                    </div>
+                </div>
 
-            <label>Frame Width <input type="number" id="frameWidth" value="32"></label>
-            <label>Frame Height <input type="number" id="frameHeight" value="32"></label>
-            <label>Total Frames <input type="number" id="frameCount" value="8"></label>
-            <label>FPS <input type="number" id="fps" value="12"></label>
-            <label>Scale <input type="number" id="scale" value="8"></label>
-            <label>Reflection Offset <input type="number" id="offsetY" value="0"></label>
-            <label>Reflection Opacity <input type="number" id="reflectionOpacity" step="0.1" min="0" max="1"
-                    value="0.2"></label>
-            <label>Background Color <input type="color" id="bgColor" value="#111111"></label>
-            <label>Canvas Width <input type="number" id="canvasWidth" value="600"></label>
-            <label>Canvas Height <input type="number" id="canvasHeight" value="600"></label>
+                <div class="section">
+                    <div class="section-title">Frame Settings</div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Frame Width</label>
+                            <input type="number" id="frameWidth" value="32">
+                        </div>
+                        <div class="form-group">
+                            <label>Frame Height</label>
+                            <input type="number" id="frameHeight" value="32">
+                        </div>
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Total Frames</label>
+                            <input type="number" id="frameCount" value="8">
+                        </div>
+                        <div class="form-group">
+                            <label>FPS</label>
+                            <input type="number" id="fps" value="12">
+                        </div>
+                    </div>
+                </div>
 
-            <button id="startBtn">Play Animation</button>
-            <button id="exportBtn">Export as GIF</button>
-        </div>
+                <div class="section">
+                    <div class="section-title">Display</div>
+                    <div class="form-group">
+                        <label>Scale</label>
+                        <input type="number" id="scale" value="8">
+                    </div>
+                    <div class="grid-2col">
+                        <div class="form-group">
+                            <label>Canvas Width</label>
+                            <input type="number" id="canvasWidth" value="600">
+                        </div>
+                        <div class="form-group">
+                            <label>Canvas Height</label>
+                            <input type="number" id="canvasHeight" value="600">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Background Color</label>
+                        <input type="color" id="bgColor" value="#111111">
+                    </div>
+                </div>
 
-        <div class="preview">
-            <canvas id="canvas" width="600" height="600"></canvas>
+                <div class="section">
+                    <div class="section-title">Reflection</div>
+                    <div class="form-group">
+                        <label>Vertical Offset</label>
+                        <input type="number" id="offsetY" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Opacity</label>
+                        <input type="number" id="reflectionOpacity" step="0.1" min="0" max="1" value="0.2">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="startBtn">▶ Play Animation</button>
+                    <button id="exportBtn" class="secondary">💾 Export as GIF</button>
+                </div>
+            </div>
+
+            <div class="preview-container">
+                <canvas id="canvas" width="600" height="600"></canvas>
+            </div>
         </div>
     </div>
-
-    <footer>Pixel-perfect preview • Reflection opacity + custom background</footer>
 
     <script src="gif.js.optimized.min.js"></script>
     <script>
@@ -181,7 +451,10 @@
             const file = e.target.files[0];
             if (!file) return;
             const img = new Image();
-            img.onload = () => (image = img);
+            img.onload = () => {
+                image = img;
+                document.querySelector('.upload-text').textContent = file.name;
+            };
             img.src = URL.createObjectURL(file);
         });
 
@@ -191,11 +464,16 @@
         });
 
         startBtn.addEventListener("click", () => {
+            if (!image) {
+                alert("Please upload a sprite sheet first!");
+                return;
+            }
             updateValues();
             prepareCanvas();
             animating = true;
             lastTime = performance.now();
             requestAnimationFrame(loop);
+            startBtn.textContent = "⏸ Pause Animation";
         });
 
         function updateValues() {
@@ -258,13 +536,19 @@
         }
 
         exportBtn.addEventListener("click", () => {
-            if (!image) return alert("Upload a spritesheet first!");
+            if (!image) {
+                alert("Please upload a sprite sheet first!");
+                return;
+            }
             updateValues();
             prepareCanvas();
 
+            exportBtn.textContent = "⏳ Generating GIF...";
+            exportBtn.disabled = true;
+
             const gif = new GIF({
                 workers: 2,
-                quality: 10,
+                quality: 1,
                 workerScript: 'gif.worker.js',
                 width: canvas.width,
                 height: canvas.height
@@ -283,6 +567,8 @@
                 a.href = url;
                 a.download = 'sprite_preview.gif';
                 a.click();
+                exportBtn.textContent = "💾 Export as GIF";
+                exportBtn.disabled = false;
             });
 
             gif.render();
