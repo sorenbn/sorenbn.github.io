@@ -709,7 +709,7 @@ function renderTrendInsight(points) {
 function renderRecentSessions(points) {
   const container = document.querySelector("#recent-sessions");
   container.innerHTML = "";
-  const recent = points.slice(-6).reverse();
+  const recent = points.slice(-4).reverse();
   if (!recent.length) {
     container.innerHTML = '<p class="recent-empty">No sessions for this table yet. A focused, mixed, or review round will all count.</p>';
     return;
@@ -743,7 +743,7 @@ function drawTrendChart(canvasId, emptyId, points, metric) {
   if (!points.length) return;
 
   const width = canvas.clientWidth || 420;
-  const height = 230;
+  const height = 190;
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = Math.round(width * ratio);
   canvas.height = Math.round(height * ratio);

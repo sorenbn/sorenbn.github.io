@@ -75,10 +75,6 @@ html[data-theme="dark"] {
   --shadow: 0 20px 55px rgba(0, 0, 0, 0.48);
 }
 
-html[data-theme="dark"] .doodle-two {
-  color: var(--deep);
-}
-
 html[data-theme="dark"] .brand-mark,
 html[data-theme="dark"] .table-button.is-selected,
 html[data-theme="dark"] .cover-button[aria-pressed="true"],
@@ -173,8 +169,8 @@ a:focus-visible {
   grid-template-columns: 1fr auto 1fr;
   grid-template-areas: "brand nav actions";
   align-items: center;
-  min-height: 82px;
-  padding: 14px max(24px, calc((100vw - 1160px) / 2));
+  min-height: 68px;
+  padding: 9px max(24px, calc((100vw - 1160px) / 2));
   background: var(--header-bg);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(16px);
@@ -189,15 +185,15 @@ a:focus-visible {
   color: var(--ink);
   text-decoration: none;
   font-family: var(--font-display);
-  font-size: 1.55rem;
+  font-size: 1.35rem;
   font-weight: 700;
 }
 
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   color: var(--white);
   background: var(--purple);
   border-radius: 12px 12px 12px 5px;
@@ -214,7 +210,7 @@ a:focus-visible {
 }
 
 .nav-button {
-  padding: 9px 15px;
+  padding: 8px 13px;
   color: var(--muted);
   background: transparent;
   border: 0;
@@ -293,29 +289,26 @@ a:focus-visible {
 }
 
 .view {
-  min-height: 72vh;
+  min-height: 64vh;
 }
 
 .learn-hero {
   position: relative;
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  align-items: center;
-  min-height: 380px;
-  padding-block: 62px 72px;
+  min-height: 0;
+  padding-block: 34px 38px;
 }
 
 .learn-hero::before {
   content: "";
   position: absolute;
   z-index: -1;
-  inset: 24px 0;
+  inset: 12px 0;
   background:
     radial-gradient(circle at 76% 25%, rgba(255, 200, 87, 0.35) 0 2px, transparent 3px),
     radial-gradient(circle at 84% 72%, rgba(255, 118, 109, 0.3) 0 2px, transparent 3px),
     linear-gradient(125deg, var(--purple-soft), var(--hero-mid) 58%, var(--hero-end));
   background-size: 28px 28px, 34px 34px, auto;
-  border-radius: 36px;
+  border-radius: 26px;
 }
 
 .eyebrow,
@@ -344,8 +337,8 @@ h3 {
 
 h1 {
   max-width: 720px;
-  margin-bottom: 18px;
-  font-size: clamp(2.8rem, 7vw, 5.3rem);
+  margin-bottom: 12px;
+  font-size: clamp(2.45rem, 5vw, 4rem);
   letter-spacing: -0.04em;
 }
 
@@ -377,7 +370,8 @@ h3 {
 }
 
 .hero-copy {
-  padding-left: clamp(24px, 6vw, 72px);
+  max-width: 760px;
+  padding-inline: clamp(22px, 4vw, 48px);
 }
 
 .hero-intro {
@@ -387,59 +381,8 @@ h3 {
   font-size: 1.15rem;
 }
 
-.hero-doodle {
-  position: relative;
-  height: 260px;
-}
-
-.doodle-card {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  width: 180px;
-  height: 130px;
-  font-family: var(--font-display);
-  font-size: 2.5rem;
-  border: 4px solid var(--deep);
-  border-radius: 25px 25px 25px 8px;
-  box-shadow: 9px 10px 0 var(--deep);
-}
-
-.doodle-one {
-  top: 20px;
-  left: 20px;
-  background: var(--surface);
-  transform: rotate(-7deg);
-}
-
-.doodle-two {
-  right: 36px;
-  bottom: 20px;
-  color: var(--ink);
-  background: var(--yellow);
-  transform: rotate(7deg);
-}
-
-.spark {
-  position: absolute;
-  color: var(--coral);
-  font-size: 2rem;
-}
-
-.spark-one {
-  top: 12px;
-  right: 54px;
-}
-
-.spark-two {
-  bottom: 8px;
-  left: 58px;
-  color: var(--purple);
-  font-size: 1.2rem;
-}
-
 .learning-area {
-  padding-block: 26px 80px;
+  padding-block: 14px 48px;
 }
 
 .section-heading {
@@ -447,7 +390,7 @@ h3 {
   align-items: end;
   justify-content: space-between;
   gap: 30px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .section-heading p:last-child {
@@ -460,7 +403,7 @@ h3 {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 8px;
-  margin-bottom: 34px;
+  margin-bottom: 18px;
 }
 
 .table-button {
@@ -491,7 +434,7 @@ h3 {
 .study-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.7fr);
-  gap: 22px;
+  gap: 14px;
   align-items: start;
 }
 
@@ -509,7 +452,7 @@ h3 {
 }
 
 .study-card {
-  padding: 30px;
+  padding: 22px;
 }
 
 .study-card-header {
@@ -540,22 +483,22 @@ h3 {
 }
 
 .cover-help {
-  margin-bottom: 22px;
+  margin-bottom: 12px;
   color: var(--muted);
 }
 
 .fact-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 9px;
+  gap: 6px;
 }
 
 .fact-row {
   display: grid;
   grid-template-columns: 1fr 48px 1fr;
   align-items: center;
-  min-height: 58px;
-  padding: 8px 15px;
+  min-height: 48px;
+  padding: 6px 12px;
   background: var(--surface-muted);
   border: 1px solid transparent;
   border-radius: 14px;
@@ -599,12 +542,12 @@ h3 {
 
 .side-stack {
   display: grid;
-  gap: 22px;
+  gap: 14px;
 }
 
 .pattern-card,
 .ready-card {
-  padding: 25px;
+  padding: 20px;
 }
 
 .pattern-card {
@@ -616,9 +559,9 @@ h3 {
 .card-icon {
   display: inline-grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  margin-bottom: 17px;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 10px;
   background: var(--surface);
   border-radius: 14px;
   font-size: 1.35rem;
@@ -659,8 +602,8 @@ h3 {
 .primary-button,
 .secondary-button,
 .next-button {
-  min-height: 48px;
-  padding: 12px 19px;
+  min-height: 44px;
+  padding: 10px 17px;
   border: 0;
   border-radius: 13px;
   font-weight: 800;
@@ -696,7 +639,7 @@ h3 {
 
 #practice-view,
 #progress-view {
-  padding-block: 65px 90px;
+  padding-block: 36px 56px;
 }
 
 .practice-header,
@@ -705,13 +648,13 @@ h3 {
   justify-content: space-between;
   align-items: center;
   gap: 30px;
-  margin-bottom: 35px;
+  margin-bottom: 20px;
 }
 
 .practice-header h1,
 .progress-header h1 {
-  margin-bottom: 10px;
-  font-size: clamp(2.5rem, 6vw, 4.4rem);
+  margin-bottom: 6px;
+  font-size: clamp(2.1rem, 4vw, 3.35rem);
 }
 
 .practice-header p:last-child,
@@ -724,7 +667,7 @@ h3 {
   align-items: center;
   gap: 12px;
   min-width: 160px;
-  padding: 15px 18px;
+  padding: 11px 15px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 17px;
@@ -752,8 +695,8 @@ h3 {
 .mode-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .mode-card {
@@ -762,8 +705,8 @@ h3 {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 14px;
-  min-height: 110px;
-  padding: 18px;
+  min-height: 88px;
+  padding: 14px;
   text-align: left;
   background: var(--surface);
   border: 2px solid var(--line);
@@ -783,8 +726,8 @@ h3 {
 .mode-icon {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   border-radius: 14px;
   font-size: 1.45rem;
   font-weight: 800;
@@ -822,7 +765,7 @@ h3 {
 }
 
 .setup-panel {
-  padding: 28px;
+  padding: 20px;
 }
 
 .setup-label-row,
@@ -854,11 +797,11 @@ h3 {
 }
 
 .table-picker.compact {
-  margin-bottom: 26px;
+  margin-bottom: 16px;
 }
 
 .setup-row {
-  padding-top: 22px;
+  padding-top: 16px;
   border-top: 1px solid var(--line);
 }
 
@@ -900,7 +843,7 @@ h3 {
 
 .progress-track {
   height: 9px;
-  margin-bottom: 22px;
+  margin-bottom: 14px;
   overflow: hidden;
   background: var(--track);
   border-radius: 999px;
@@ -916,12 +859,12 @@ h3 {
 }
 
 .question-card {
-  padding: clamp(28px, 7vw, 60px);
+  padding: clamp(22px, 5vw, 42px);
   text-align: center;
 }
 
 .question-kicker {
-  margin-bottom: 22px;
+  margin-bottom: 14px;
   color: var(--purple);
   font-size: 0.8rem;
   font-weight: 800;
@@ -932,13 +875,13 @@ h3 {
 .equation {
   margin-bottom: 13px;
   font-family: var(--font-display);
-  font-size: clamp(3.4rem, 12vw, 6.8rem);
+  font-size: clamp(3.2rem, 10vw, 5.8rem);
   line-height: 1;
   letter-spacing: -0.04em;
 }
 
 .question-context {
-  margin-bottom: 27px;
+  margin-bottom: 18px;
   color: var(--muted);
 }
 
@@ -988,8 +931,8 @@ h3 {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin-top: 25px;
-  padding: 16px;
+  margin-top: 16px;
+  padding: 13px;
   text-align: left;
   background: var(--green-soft);
   border-radius: 15px;
@@ -1011,16 +954,16 @@ h3 {
 .results-panel {
   width: min(720px, 100%);
   margin: 20px auto 0;
-  padding: clamp(32px, 7vw, 60px);
+  padding: clamp(24px, 5vw, 42px);
   text-align: center;
 }
 
 .result-burst {
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
-  margin: 0 auto 20px;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
   color: var(--ink);
   background: var(--yellow);
   border-radius: 24px 24px 24px 8px;
@@ -1029,7 +972,7 @@ h3 {
 }
 
 .results-panel h2 {
-  font-size: 2.8rem;
+  font-size: 2.3rem;
 }
 
 .results-panel > p:not(.eyebrow) {
@@ -1040,11 +983,11 @@ h3 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  margin: 28px 0;
+  margin: 18px 0;
 }
 
 .result-stats div {
-  padding: 18px 8px;
+  padding: 13px 8px;
   background: var(--surface-result);
   border-radius: 15px;
 }
@@ -1159,8 +1102,8 @@ h3 {
 }
 
 .mastery-section {
-  padding: 30px;
-  margin-top: 16px;
+  padding: 22px;
+  margin-top: 12px;
 }
 
 .mastery-grid {
@@ -1239,7 +1182,7 @@ h3 {
 }
 
 .analytics-section {
-  padding: clamp(18px, 3vw, 24px);
+  padding: clamp(14px, 2vw, 20px);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -1331,8 +1274,8 @@ h3 {
 }
 
 .trend-insight {
-  margin: 16px 0 0;
-  padding: 11px 14px;
+  margin: 10px 0 0;
+  padding: 9px 12px;
   color: var(--purple-dark);
   background: var(--purple-soft);
   border-radius: 12px;
@@ -1342,21 +1285,21 @@ h3 {
 .chart-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .chart-card,
 .recent-card {
   min-width: 0;
-  padding: 16px;
+  padding: 14px;
   background: var(--surface-muted);
   border: 1px solid var(--line);
   border-radius: 18px;
 }
 
 .recent-card {
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .chart-heading > div {
@@ -1387,14 +1330,14 @@ h3 {
 
 .chart-wrap {
   position: relative;
-  min-height: 230px;
-  margin-top: 14px;
+  min-height: 190px;
+  margin-top: 10px;
 }
 
 .chart-wrap canvas {
   display: block;
   width: 100%;
-  height: 230px;
+  height: 190px;
 }
 
 .chart-empty {
@@ -1409,11 +1352,11 @@ h3 {
 }
 
 .recent-sessions {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .recent-session {
-  padding: 13px 4px;
+  padding: 9px 4px;
   border-top: 1px solid var(--line);
 }
 
@@ -1457,7 +1400,7 @@ footer {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  padding: 30px max(24px, calc((100vw - 1160px) / 2));
+  padding: 18px max(24px, calc((100vw - 1160px) / 2));
   color: var(--footer-muted);
   background: var(--deep);
 }
@@ -1502,16 +1445,6 @@ footer p {
     color: var(--ink);
   }
 
-  .learn-hero {
-    grid-template-columns: 1fr 0.8fr;
-  }
-
-  .doodle-card {
-    width: 145px;
-    height: 110px;
-    font-size: 2rem;
-  }
-
   .study-layout {
     grid-template-columns: 1fr;
   }
@@ -1545,20 +1478,23 @@ footer p {
   }
 
   .site-header {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto 1fr;
     grid-template-areas:
-      "brand"
-      "actions"
-      "nav";
+      "brand actions"
+      "nav nav";
     min-height: auto;
     padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
     row-gap: 9px;
   }
 
   .header-actions {
-    justify-self: stretch;
+    justify-self: end;
     display: flex;
     min-width: 0;
+  }
+
+  .brand > span:last-child {
+    display: none;
   }
 
   .subject-picker {
@@ -1611,30 +1547,13 @@ footer p {
   }
 
   .learn-hero {
-    display: block;
-    min-height: 430px;
-    padding: 48px 25px;
+    min-height: 0;
+    padding: 26px 16px 28px;
   }
 
   .hero-copy {
-    padding-left: 0;
+    padding-inline: 8px;
   }
-
-  .hero-doodle {
-    height: 155px;
-    margin-top: 25px;
-  }
-
-  .doodle-card {
-    width: 125px;
-    height: 88px;
-    border-width: 3px;
-    font-size: 1.7rem;
-    box-shadow: 6px 7px 0 var(--deep);
-  }
-
-  .doodle-one { left: 10%; }
-  .doodle-two { right: 10%; }
 
   .learning-area {
     padding-top: 8px;
@@ -1655,11 +1574,25 @@ footer p {
     grid-template-columns: repeat(6, 1fr);
   }
 
-  .fact-grid,
   .side-stack,
   .mode-grid,
   .mastery-grid {
     grid-template-columns: 1fr;
+  }
+
+  .fact-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fact-row {
+    grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+    min-height: 46px;
+    padding: 5px 8px;
+    font-size: 0.92rem;
+  }
+
+  .fact-answer {
+    font-size: 1.1rem;
   }
 
   .mode-card:last-child {
@@ -1669,12 +1602,12 @@ footer p {
   .study-card,
   .setup-panel,
   .mastery-section {
-    padding: 20px;
+    padding: 16px;
   }
 
   #practice-view,
   #progress-view {
-    padding-block: 38px 90px;
+    padding-block: 24px 44px;
   }
 
   .practice-header .mini-stat {
