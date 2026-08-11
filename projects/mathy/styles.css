@@ -1216,6 +1216,15 @@ h3 {
   gap: 10px;
 }
 
+.progress-filter-bar .progress-filter-actions {
+  align-items: center;
+}
+
+.progress-practice-button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
 .progress-filter-bar .step-label {
   margin: 0;
 }
@@ -1677,6 +1686,25 @@ footer p {
 
   .analytics-table-picker select {
     flex: 1;
+  }
+
+  .progress-filter-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+  }
+
+  .progress-filter-actions .analytics-table-picker {
+    width: auto;
+  }
+
+  .progress-filter-actions .analytics-table-picker > span {
+    display: none;
+  }
+
+  .progress-filter-actions .analytics-table-picker select {
+    min-width: 0;
+    width: 100%;
   }
 
   .recent-session {

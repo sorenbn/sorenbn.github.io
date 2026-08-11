@@ -908,6 +908,12 @@ document.querySelector("#analytics-table-select").addEventListener("change", (ev
   state.analyticsTable = Number(event.target.value);
   renderProgress();
 });
+document.querySelector("#practice-progress-table").addEventListener("click", () => {
+  state.selectedTable = state.analyticsTable;
+  updateSelectedTable();
+  setPracticeMode("focused");
+  showView("practice");
+});
 
 const installAppButton = document.querySelector("#install-app");
 const themeToggleButton = document.querySelector("#theme-toggle");
