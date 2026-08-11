@@ -29,8 +29,6 @@
   --bottom-nav-muted: #c8c3d8;
   --hero-mid: #f4f0ff;
   --hero-end: #fff7de;
-  --pattern-border: #f1d983;
-  --pattern-sequence: rgba(255, 255, 255, 0.7);
   --track: #e5e2dc;
   --track-muted: #e2dfd6;
   --footer-muted: #a7a2ba;
@@ -42,45 +40,53 @@
 }
 
 html[data-theme="dark"] {
-  --ink: #f4f1ff;
-  --muted: #b9b4ca;
-  --paper: #171522;
-  --surface: #242034;
-  --surface-muted: #201d2e;
-  --surface-accent: #2b2547;
-  --surface-selected: #2c2744;
-  --surface-result: #201d2e;
-  --surface-mastery: #201d2e;
-  --covered: #4a455a;
-  --deep: #0f0d18;
-  --line: #3d374e;
-  --purple: #9c91ff;
-  --purple-dark: #8175ef;
-  --purple-soft: #332d52;
-  --coral: #ff8d86;
-  --coral-soft: #4b2b31;
-  --yellow: #ffd06b;
-  --yellow-soft: #473c24;
-  --yellow-ink: #ffe4a3;
-  --yellow-strong: #ffd677;
-  --green: #62d0b5;
-  --green-soft: #23423b;
-  --header-bg: rgba(23, 21, 34, 0.93);
-  --nav-bg: #100e19;
-  --bottom-nav-bg: rgba(15, 13, 24, 0.96);
-  --bottom-nav-muted: #b9b4ca;
-  --hero-mid: #2b2645;
-  --hero-end: #3d3421;
-  --pattern-border: #6b5a2e;
-  --pattern-sequence: rgba(15, 13, 24, 0.45);
-  --track: #3a3548;
-  --track-muted: #403a4f;
-  --footer-muted: #9f99b1;
-  --shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+  --ink: #e6edf3;
+  --muted: #8b949e;
+  --paper: #0d1117;
+  --surface: #161b22;
+  --surface-muted: #11161d;
+  --surface-accent: #1c2430;
+  --surface-selected: #1f2937;
+  --surface-result: #11161d;
+  --surface-mastery: #11161d;
+  --covered: #3b434d;
+  --deep: #010409;
+  --line: #30363d;
+  --purple: #388bfd;
+  --purple-dark: #1f6feb;
+  --purple-soft: #18263a;
+  --coral: #f778ba;
+  --coral-soft: #3a2032;
+  --yellow: #d29922;
+  --yellow-soft: #332a12;
+  --yellow-ink: #f2cc60;
+  --yellow-strong: #e3b341;
+  --green: #3fb950;
+  --green-soft: #1b3322;
+  --header-bg: rgba(13, 17, 23, 0.96);
+  --nav-bg: #010409;
+  --bottom-nav-bg: rgba(1, 4, 9, 0.98);
+  --bottom-nav-muted: #8b949e;
+  --hero-mid: #111827;
+  --hero-end: #172033;
+  --track: #30363d;
+  --track-muted: #353d47;
+  --footer-muted: #7d8590;
+  --shadow: 0 20px 55px rgba(0, 0, 0, 0.48);
 }
 
 html[data-theme="dark"] .doodle-two {
   color: var(--deep);
+}
+
+html[data-theme="dark"] .brand-mark,
+html[data-theme="dark"] .table-button.is-selected,
+html[data-theme="dark"] .cover-button[aria-pressed="true"],
+html[data-theme="dark"] .primary-button,
+html[data-theme="dark"] .next-button,
+html[data-theme="dark"] .theme-button:hover,
+html[data-theme="dark"] .install-button:hover {
+  color: var(--white);
 }
 
 * {
@@ -602,23 +608,9 @@ h3 {
 }
 
 .pattern-card {
-  position: relative;
-  overflow: hidden;
-  background: var(--yellow-soft);
-  border-color: var(--pattern-border);
-  box-shadow: none;
-}
-
-.pattern-card::after {
-  content: "";
-  position: absolute;
-  right: -35px;
-  bottom: -42px;
-  width: 115px;
-  height: 115px;
-  background: var(--yellow);
-  border-radius: 50%;
-  opacity: 0.38;
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: inset 0 3px 0 var(--yellow);
 }
 
 .card-icon {
@@ -632,16 +624,19 @@ h3 {
   font-size: 1.35rem;
 }
 
+.pattern-card .card-icon {
+  background: var(--yellow-soft);
+}
+
 .pattern-card p:not(.step-label),
 .ready-card p:not(.step-label) {
   color: var(--muted);
 }
 
 .pattern-sequence {
-  position: relative;
-  z-index: 1;
   padding: 13px;
-  background: var(--pattern-sequence);
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
   border-radius: 12px;
   font-weight: 800;
   word-spacing: 5px;
@@ -1087,6 +1082,8 @@ h3 {
   min-height: 170px;
   padding: 24px;
   overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 22px;
 }
 
@@ -1096,7 +1093,7 @@ h3 {
   width: 40px;
   height: 40px;
   margin-bottom: 20px;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--surface-muted);
   border-radius: 12px;
 }
 
@@ -1117,10 +1114,41 @@ h3 {
   font-weight: 700;
 }
 
-.purple-card { background: var(--purple-soft); }
-.coral-card { background: var(--coral-soft); }
-.yellow-card { background: var(--yellow-soft); }
-.green-card { background: var(--green-soft); }
+.purple-card {
+  box-shadow: inset 0 3px 0 var(--purple);
+}
+
+.purple-card > span {
+  color: var(--purple);
+  background: var(--purple-soft);
+}
+
+.coral-card {
+  box-shadow: inset 0 3px 0 var(--coral);
+}
+
+.coral-card > span {
+  color: var(--coral);
+  background: var(--coral-soft);
+}
+
+.yellow-card {
+  box-shadow: inset 0 3px 0 var(--yellow);
+}
+
+.yellow-card > span {
+  color: var(--yellow);
+  background: var(--yellow-soft);
+}
+
+.green-card {
+  box-shadow: inset 0 3px 0 var(--green);
+}
+
+.green-card > span {
+  color: var(--green);
+  background: var(--green-soft);
+}
 
 .mastery-section {
   padding: 30px;

@@ -534,7 +534,7 @@ function updateThemeButton(theme) {
   themeToggleButton.querySelector(".theme-label").textContent = dark ? "Light" : "Dark";
   themeToggleButton.setAttribute("aria-label", `Switch to ${dark ? "light" : "dark"} mode`);
   themeToggleButton.setAttribute("aria-pressed", String(dark));
-  themeColorMeta.content = dark ? "#171522" : "#6557e8";
+  themeColorMeta.content = dark ? "#0d1117" : "#6557e8";
 }
 
 function setTheme(theme) {
