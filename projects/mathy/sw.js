@@ -1,4 +1,4 @@
-const CACHE_NAME = "mathy-v2";
+const CACHE_NAME = "mathy-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -27,22 +27,29 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
+  const requestUrl = new URL(event.request.url);
+  const isLocalAsset = requestUrl.origin === self.location.origin;
 
-      return fetch(event.request)
-        .then((response) => {
-          if (response.ok && new URL(event.request.url).origin === self.location.origin) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => {
+  if (!isLocalAsset) {
+    event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return response;
+      })
+      .catch(() =>
+        caches.match(event.request).then((cached) => {
+          if (cached) return cached;
           if (event.request.mode === "navigate") return caches.match("./index.html");
           return Response.error();
-        });
-    }),
+        }),
+      ),
   );
 });
