@@ -395,6 +395,7 @@ function finalizeActiveSession(status) {
 
 function renderQuestion() {
   const question = state.questions[state.currentIndex];
+  const input = document.querySelector("#answer-input");
   state.answered = false;
   state.questionStartedAt = Date.now();
   state.hintUsed = false;
@@ -407,20 +408,25 @@ function renderQuestion() {
     : `How many groups of ${question.table} fit into ${question.table * question.value}?`;
   document.querySelector("#live-correct").textContent = state.correct;
   document.querySelector("#live-streak").textContent = state.streak;
-  document.querySelector("#answer-input").value = "";
-  document.querySelector("#answer-input").disabled = false;
+  input.value = "";
+  input.disabled = false;
+  input.removeAttribute("aria-readonly");
+  input.enterKeyHint = state.currentIndex === state.questions.length - 1 ? "done" : "next";
   document.querySelector("#check-answer").disabled = false;
   document.querySelector("#feedback").hidden = true;
   document.querySelector("#feedback").classList.remove("is-wrong");
   document.querySelector("#hint-copy").hidden = true;
   document.querySelector("#show-hint").hidden = false;
-  document.querySelector("#answer-input").focus();
+  input.focus({ preventScroll: true });
   startRoundTimer();
 }
 
 function answerQuestion(event) {
   event.preventDefault();
-  if (state.answered) return;
+  if (state.answered) {
+    nextQuestion();
+    return;
+  }
   const input = document.querySelector("#answer-input");
   if (input.value === "") return;
 
@@ -453,7 +459,7 @@ function answerQuestion(event) {
   updateRoundTimer();
   saveProgress();
 
-  input.disabled = true;
+  input.setAttribute("aria-readonly", "true");
   document.querySelector("#check-answer").disabled = true;
   document.querySelector("#show-hint").hidden = true;
   document.querySelector("#hint-copy").hidden = true;
@@ -468,7 +474,6 @@ function answerQuestion(event) {
     ? `${question.text} = ${question.answer}`
     : `The answer is ${question.answer}. You entered ${givenAnswer}.`;
   document.querySelector("#next-question").textContent = state.currentIndex === state.questions.length - 1 ? "See results →" : "Next →";
-  document.querySelector("#next-question").focus();
 }
 
 function randomPraise() {
@@ -551,6 +556,7 @@ function finishRound() {
   const session = finalizeActiveSession("completed");
   commitCompletedSession(session);
   const timeRecord = timeRecordForSession(session);
+  document.querySelector("#answer-input").blur();
   document.querySelector("#quiz-panel").hidden = true;
   document.querySelector("#results-panel").hidden = false;
   const percent = Math.round((state.correct / state.questions.length) * 100);
@@ -583,6 +589,7 @@ function resetPracticePanels() {
 }
 
 function quitPractice() {
+  document.querySelector("#answer-input").blur();
   finalizeActiveSession("ended");
   resetPracticePanels();
 }
@@ -938,6 +945,20 @@ document.querySelector("#answer-input").addEventListener("input", (event) => {
   if (Number(event.currentTarget.value) === question.answer) {
     document.querySelector("#answer-form").requestSubmit();
   }
+});
+document.querySelector("#answer-input").addEventListener("beforeinput", (event) => {
+  if (state.answered) event.preventDefault();
+});
+document.querySelector("#answer-input").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && state.answered) {
+    event.preventDefault();
+    nextQuestion();
+  }
+});
+["#check-answer", "#show-hint", "#next-question"].forEach((selector) => {
+  document.querySelector(selector).addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+  });
 });
 document.querySelector("#next-question").addEventListener("click", nextQuestion);
 document.querySelector("#show-hint").addEventListener("click", showHint);
