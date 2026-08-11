@@ -348,24 +348,31 @@ function startPractice() {
   document.querySelector("#practice-setup").hidden = true;
   document.querySelector("#results-panel").hidden = true;
   document.querySelector("#quiz-panel").hidden = false;
-  startRoundTimer();
   renderQuestion();
 }
 
 function startRoundTimer() {
   stopRoundTimer();
-  const update = () => {
-    if (!state.activeSession) return;
-    const elapsed = Date.now() - new Date(state.activeSession.startedAt).getTime();
-    document.querySelector("#live-elapsed").textContent = formatDuration(elapsed);
-  };
-  update();
-  state.timerId = window.setInterval(update, 500);
+  updateRoundTimer();
+  state.timerId = window.setInterval(updateRoundTimer, 500);
 }
 
 function stopRoundTimer() {
   if (state.timerId) window.clearInterval(state.timerId);
   state.timerId = null;
+}
+
+function currentPracticeTime(session = state.activeSession) {
+  if (!session) return 0;
+  const currentQuestionMs = session === state.activeSession && !state.answered && state.questionStartedAt
+    ? Math.max(0, Date.now() - state.questionStartedAt)
+    : 0;
+  return sumResponseTime(session.questions || []) + currentQuestionMs;
+}
+
+function updateRoundTimer() {
+  if (!state.activeSession) return;
+  document.querySelector("#live-elapsed").textContent = formatDuration(currentPracticeTime());
 }
 
 function finalizeActiveSession(status) {
@@ -375,7 +382,7 @@ function finalizeActiveSession(status) {
   session.status = status;
   session.endedAt = endedAt.toISOString();
   session.durationMs = Math.max(0, endedAt.getTime() - new Date(session.startedAt).getTime());
-  session.practiceTimeMs = sumResponseTime(session.questions);
+  session.practiceTimeMs = currentPracticeTime(session);
   session.correct = session.questions.filter((question) => question.correct).length;
   session.answered = session.questions.length;
   session.mistakes = session.answered - session.correct;
@@ -412,6 +419,7 @@ function renderQuestion() {
   document.querySelector("#hint-copy").hidden = true;
   document.querySelector("#show-hint").hidden = false;
   document.querySelector("#answer-input").focus();
+  startRoundTimer();
 }
 
 function answerQuestion(event) {
@@ -425,6 +433,7 @@ function answerQuestion(event) {
   const correct = givenAnswer === question.answer;
   const responseMs = Math.max(0, Date.now() - state.questionStartedAt);
   state.answered = true;
+  stopRoundTimer();
   state.progress.totalAnswered += 1;
 
   const tableStats = state.progress.tables[question.subject][question.table] || {
@@ -468,6 +477,7 @@ function answerQuestion(event) {
     usedHint: state.hintUsed,
     answeredAt: new Date().toISOString(),
   });
+  updateRoundTimer();
   saveProgress();
 
   input.disabled = true;
@@ -519,7 +529,7 @@ function finishRound() {
   document.querySelector("#result-percent").textContent = `${percent}%`;
   document.querySelector("#result-streak").textContent = state.roundBestStreak;
   document.querySelector("#result-missed").textContent = state.missed.length;
-  document.querySelector("#result-time").textContent = formatDuration(session?.durationMs || 0);
+  document.querySelector("#result-time").textContent = formatDuration(session?.practiceTimeMs || 0);
   document.querySelector("#review-round").hidden = state.missed.length === 0;
   document.querySelector("#header-best-streak").textContent = state.progress.bestStreak;
 }
