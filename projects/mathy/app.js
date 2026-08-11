@@ -1,9 +1,13 @@
 const TABLE_MIN = 1;
 const TABLE_MAX = 12;
-const STORAGE_KEY = "mathy-progress-v1";
+const STORAGE_KEY = "mathy-progress-v2";
+const LEGACY_STORAGE_KEY = "mathy-progress-v1";
+const SESSION_LIMIT = 250;
 let deferredInstallPrompt = null;
+let chartResizeFrame = null;
 
 const defaultProgress = () => ({
+  version: 2,
   totalCorrect: 0,
   totalAnswered: 0,
   rounds: 0,
@@ -13,6 +17,7 @@ const defaultProgress = () => ({
     multiplication: {},
     division: {},
   },
+  sessions: [],
 });
 
 const state = {
@@ -27,6 +32,11 @@ const state = {
   missed: [],
   answered: false,
   coverAnswers: false,
+  activeSession: null,
+  questionStartedAt: 0,
+  hintUsed: false,
+  timerId: null,
+  analyticsTable: 6,
   progress: loadProgress(),
 };
 
@@ -37,9 +47,9 @@ const factGrid = document.querySelector("#fact-grid");
 
 function loadProgress() {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY));
     if (!saved) return defaultProgress();
-    return {
+    const progress = {
       ...defaultProgress(),
       ...saved,
       tables: {
@@ -47,14 +57,54 @@ function loadProgress() {
         division: saved.tables?.division || {},
       },
       mistakes: saved.mistakes || {},
+      sessions: Array.isArray(saved.sessions) ? saved.sessions.slice(-SESSION_LIMIT) : [],
     };
+    ["multiplication", "division"].forEach((subject) => {
+      Object.values(progress.tables[subject]).forEach((stats) => {
+        stats.correct = Number(stats.correct) || 0;
+        stats.answered = Number(stats.answered) || 0;
+        stats.mistakes = Number(stats.mistakes) || Math.max(0, stats.answered - stats.correct);
+        stats.totalResponseMs = Number(stats.totalResponseMs) || 0;
+        stats.hints = Number(stats.hints) || 0;
+      });
+    });
+    progress.sessions.forEach((session) => {
+      if (session.status === "in-progress") {
+        session.status = "ended";
+        session.endedAt = session.endedAt || new Date().toISOString();
+        session.durationMs = session.durationMs || sumResponseTime(session.questions || []);
+      }
+    });
+    return progress;
   } catch {
     return defaultProgress();
   }
 }
 
 function saveProgress() {
+  state.progress.version = 2;
+  state.progress.sessions = state.progress.sessions.slice(-SESSION_LIMIT);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.progress));
+}
+
+function sumResponseTime(questions) {
+  return questions.reduce((total, question) => total + (Number(question.responseMs) || 0), 0);
+}
+
+function makeId() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function formatDuration(milliseconds, compact = false) {
+  const totalSeconds = Math.max(0, Math.round((Number(milliseconds) || 0) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (compact) {
+    if (minutes >= 60) return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+    return minutes ? `${minutes}m ${seconds}s` : `${seconds}s`;
+  }
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function operationSymbol(subject = state.subject) {
@@ -78,6 +128,15 @@ function createTablePickers() {
       picker.append(button);
     }
   });
+  const analyticsSelect = document.querySelector("#analytics-table-select");
+  analyticsSelect.innerHTML = "";
+  for (let table = TABLE_MIN; table <= TABLE_MAX; table += 1) {
+    const option = document.createElement("option");
+    option.value = table;
+    option.textContent = `Table ${table}`;
+    analyticsSelect.append(option);
+  }
+  analyticsSelect.value = state.analyticsTable;
   updateSelectedTable();
 }
 
@@ -168,6 +227,9 @@ function renderPatternTip() {
 }
 
 function showView(viewName) {
+  if (viewName !== "practice" && state.activeSession) {
+    finalizeActiveSession("ended");
+  }
   document.querySelectorAll(".view").forEach((view) => {
     const active = view.dataset.view === viewName;
     view.hidden = !active;
@@ -180,7 +242,7 @@ function showView(viewName) {
     else button.removeAttribute("aria-current");
   });
   if (viewName === "progress") renderProgress();
-  if (viewName === "practice") resetPracticePanels();
+  if (viewName === "practice" && !state.activeSession) resetPracticePanels();
   window.location.hash = viewName;
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -269,15 +331,70 @@ function startPractice() {
   state.streak = 0;
   state.roundBestStreak = 0;
   state.missed = [];
+  state.activeSession = {
+    id: makeId(),
+    subject: state.subject,
+    mode: state.mode,
+    selectedTable: state.mode === "focused" ? state.selectedTable : null,
+    plannedQuestions: state.questions.length,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    durationMs: 0,
+    status: "in-progress",
+    questions: [],
+  };
+  state.progress.sessions.push(state.activeSession);
+  saveProgress();
   document.querySelector("#practice-setup").hidden = true;
   document.querySelector("#results-panel").hidden = true;
   document.querySelector("#quiz-panel").hidden = false;
+  startRoundTimer();
   renderQuestion();
+}
+
+function startRoundTimer() {
+  stopRoundTimer();
+  const update = () => {
+    if (!state.activeSession) return;
+    const elapsed = Date.now() - new Date(state.activeSession.startedAt).getTime();
+    document.querySelector("#live-elapsed").textContent = formatDuration(elapsed);
+  };
+  update();
+  state.timerId = window.setInterval(update, 500);
+}
+
+function stopRoundTimer() {
+  if (state.timerId) window.clearInterval(state.timerId);
+  state.timerId = null;
+}
+
+function finalizeActiveSession(status) {
+  const session = state.activeSession;
+  if (!session) return null;
+  const endedAt = new Date();
+  session.status = status;
+  session.endedAt = endedAt.toISOString();
+  session.durationMs = Math.max(0, endedAt.getTime() - new Date(session.startedAt).getTime());
+  session.practiceTimeMs = sumResponseTime(session.questions);
+  session.correct = session.questions.filter((question) => question.correct).length;
+  session.answered = session.questions.length;
+  session.mistakes = session.answered - session.correct;
+  session.bestStreak = state.roundBestStreak;
+  if (status === "completed") {
+    state.progress.rounds += 1;
+    state.progress.bestStreak = Math.max(state.progress.bestStreak, state.roundBestStreak);
+  }
+  stopRoundTimer();
+  state.activeSession = null;
+  saveProgress();
+  return session;
 }
 
 function renderQuestion() {
   const question = state.questions[state.currentIndex];
   state.answered = false;
+  state.questionStartedAt = Date.now();
+  state.hintUsed = false;
   document.querySelector("#question-position").textContent = `Question ${state.currentIndex + 1} of ${state.questions.length}`;
   document.querySelector("#quiz-progress").style.width = `${(state.currentIndex / state.questions.length) * 100}%`;
   document.querySelector("#question-kicker").textContent = tableName(question.table, question.subject);
@@ -306,11 +423,21 @@ function answerQuestion(event) {
   const question = state.questions[state.currentIndex];
   const givenAnswer = Number(input.value);
   const correct = givenAnswer === question.answer;
+  const responseMs = Math.max(0, Date.now() - state.questionStartedAt);
   state.answered = true;
   state.progress.totalAnswered += 1;
 
-  const tableStats = state.progress.tables[question.subject][question.table] || { correct: 0, answered: 0 };
+  const tableStats = state.progress.tables[question.subject][question.table] || {
+    correct: 0,
+    answered: 0,
+    mistakes: 0,
+    totalResponseMs: 0,
+    hints: 0,
+  };
   tableStats.answered += 1;
+  tableStats.totalResponseMs = (tableStats.totalResponseMs || 0) + responseMs;
+  tableStats.hints = (tableStats.hints || 0) + (state.hintUsed ? 1 : 0);
+  tableStats.lastPracticedAt = new Date().toISOString();
 
   if (correct) {
     state.correct += 1;
@@ -322,6 +449,7 @@ function answerQuestion(event) {
   } else {
     state.streak = 0;
     state.missed.push(question);
+    tableStats.mistakes = (tableStats.mistakes || 0) + 1;
     state.progress.mistakes[question.key] = {
       subject: question.subject,
       table: question.table,
@@ -329,6 +457,17 @@ function answerQuestion(event) {
     };
   }
   state.progress.tables[question.subject][question.table] = tableStats;
+  state.activeSession?.questions.push({
+    subject: question.subject,
+    table: question.table,
+    value: question.value,
+    correct,
+    givenAnswer,
+    expectedAnswer: question.answer,
+    responseMs,
+    usedHint: state.hintUsed,
+    answeredAt: new Date().toISOString(),
+  });
   saveProgress();
 
   input.disabled = true;
@@ -365,9 +504,7 @@ function nextQuestion() {
 }
 
 function finishRound() {
-  state.progress.rounds += 1;
-  state.progress.bestStreak = Math.max(state.progress.bestStreak, state.roundBestStreak);
-  saveProgress();
+  const session = finalizeActiveSession("completed");
   document.querySelector("#quiz-panel").hidden = true;
   document.querySelector("#results-panel").hidden = false;
   const percent = Math.round((state.correct / state.questions.length) * 100);
@@ -382,6 +519,7 @@ function finishRound() {
   document.querySelector("#result-percent").textContent = `${percent}%`;
   document.querySelector("#result-streak").textContent = state.roundBestStreak;
   document.querySelector("#result-missed").textContent = state.missed.length;
+  document.querySelector("#result-time").textContent = formatDuration(session?.durationMs || 0);
   document.querySelector("#review-round").hidden = state.missed.length === 0;
   document.querySelector("#header-best-streak").textContent = state.progress.bestStreak;
 }
@@ -393,8 +531,14 @@ function resetPracticePanels() {
   setPracticeMode(state.mode);
 }
 
+function quitPractice() {
+  finalizeActiveSession("ended");
+  resetPracticePanels();
+}
+
 function showHint() {
   const question = state.questions[state.currentIndex];
+  state.hintUsed = true;
   const hint = question.subject === "multiplication"
     ? multiplicationHint(question.table, question.value)
     : `Turn it around: ${question.table} × ? = ${question.table * question.value}.`;
@@ -423,24 +567,38 @@ function mistakeCount() {
 
 function renderProgress() {
   const progress = state.progress;
+  const totalPracticeTime = progress.sessions
+    .filter((session) => session.status !== "in-progress")
+    .reduce((total, session) => total + (Number(session.practiceTimeMs) || sumResponseTime(session.questions || [])), 0);
+  const totalMistakes = Math.max(0, progress.totalAnswered - progress.totalCorrect);
+  document.querySelector("#total-practice-time").textContent = totalPracticeTime
+    ? formatDuration(totalPracticeTime, true)
+    : "0m";
   document.querySelector("#total-correct").textContent = progress.totalCorrect;
-  document.querySelector("#best-streak").textContent = progress.bestStreak;
+  document.querySelector("#total-mistakes").textContent = totalMistakes;
   document.querySelector("#header-best-streak").textContent = progress.bestStreak;
-  document.querySelector("#rounds-complete").textContent = progress.rounds;
   document.querySelector("#overall-accuracy").textContent = progress.totalAnswered
     ? `${Math.round((progress.totalCorrect / progress.totalAnswered) * 100)}%`
     : "—";
+  document.querySelector("#session-summary").textContent = progress.rounds
+    ? `${progress.rounds} completed ${progress.rounds === 1 ? "round" : "rounds"} · best streak ${progress.bestStreak} · saved on this device`
+    : "Every practice round will build your history on this device.";
   document.querySelector("#mastery-heading").textContent = state.subject === "multiplication"
     ? "Multiplication mastery"
     : "Division mastery";
+
+  renderTableAnalytics();
 
   const grid = document.querySelector("#mastery-grid");
   grid.innerHTML = "";
   for (let table = TABLE_MIN; table <= TABLE_MAX; table += 1) {
     const stats = progress.tables[state.subject][table] || { correct: 0, answered: 0 };
     const percent = stats.answered ? Math.round((stats.correct / stats.answered) * 100) : 0;
-    const card = document.createElement("article");
-    card.className = "mastery-card";
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = `mastery-card${table === state.analyticsTable ? " is-selected" : ""}`;
+    card.setAttribute("aria-pressed", String(table === state.analyticsTable));
+    card.setAttribute("aria-label", `Show progress for ${tableName(table)}`);
     card.innerHTML = `
       <span class="mastery-number">${table}</span>
       <div class="mastery-info">
@@ -450,8 +608,221 @@ function renderProgress() {
       </div>
       <span class="mastery-percent">${stats.answered ? `${percent}%` : "—"}</span>
     `;
+    card.addEventListener("click", () => {
+      state.analyticsTable = table;
+      document.querySelector("#analytics-table-select").value = table;
+      renderProgress();
+      document.querySelector("#analytics-heading").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     grid.append(card);
   }
+}
+
+function tableSessionPoints(table = state.analyticsTable) {
+  return state.progress.sessions
+    .filter((session) => session.subject === state.subject && session.status !== "in-progress")
+    .map((session) => {
+      const questions = (session.questions || []).filter((question) => Number(question.table) === table);
+      if (!questions.length) return null;
+      const correct = questions.filter((question) => question.correct).length;
+      const responseMs = sumResponseTime(questions);
+      return {
+        id: session.id,
+        startedAt: session.startedAt,
+        status: session.status,
+        questions,
+        answered: questions.length,
+        correct,
+        mistakes: questions.length - correct,
+        accuracy: (correct / questions.length) * 100,
+        averageMs: responseMs / questions.length,
+        responseMs,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => new Date(a.startedAt) - new Date(b.startedAt));
+}
+
+function renderTableAnalytics() {
+  const table = state.analyticsTable;
+  const stats = state.progress.tables[state.subject][table] || {
+    correct: 0,
+    answered: 0,
+    mistakes: 0,
+    totalResponseMs: 0,
+  };
+  const points = tableSessionPoints(table);
+  const accuracy = stats.answered ? Math.round((stats.correct / stats.answered) * 100) : null;
+  const averageMs = stats.totalResponseMs && stats.answered ? stats.totalResponseMs / stats.answered : 0;
+  document.querySelector("#table-accuracy").textContent = accuracy === null ? "—" : `${accuracy}%`;
+  document.querySelector("#table-average-time").textContent = averageMs ? `${(averageMs / 1000).toFixed(1)}s` : "—";
+  document.querySelector("#table-correct").textContent = stats.correct || 0;
+  document.querySelector("#table-mistakes").textContent = stats.mistakes || Math.max(0, (stats.answered || 0) - (stats.correct || 0));
+  document.querySelector("#recent-table-label").textContent = tableName(table);
+  document.querySelector("#analytics-table-select").value = table;
+  renderTrendInsight(points);
+  renderRecentSessions(points);
+  const recentPoints = points.slice(-12);
+  drawTrendChart("accuracy-chart", "accuracy-chart-empty", recentPoints, "accuracy");
+  drawTrendChart("speed-chart", "speed-chart-empty", recentPoints, "speed");
+}
+
+function average(items, key) {
+  if (!items.length) return 0;
+  return items.reduce((total, item) => total + item[key], 0) / items.length;
+}
+
+function renderTrendInsight(points) {
+  const insight = document.querySelector("#trend-insight");
+  if (!points.length) {
+    insight.textContent = `Practice the ${state.analyticsTable} table to start your trend.`;
+    return;
+  }
+  if (points.length === 1) {
+    insight.textContent = `First session recorded: ${Math.round(points[0].accuracy)}% accuracy at ${(points[0].averageMs / 1000).toFixed(1)} seconds per answer.`;
+    return;
+  }
+  const split = Math.ceil(points.length / 2);
+  const earlier = points.slice(0, split).slice(-3);
+  const recent = points.slice(split).slice(-3);
+  const accuracyChange = Math.round(average(recent, "accuracy") - average(earlier, "accuracy"));
+  const speedChange = (average(earlier, "averageMs") - average(recent, "averageMs")) / 1000;
+  const accuracyCopy = accuracyChange === 0
+    ? "Accuracy is holding steady"
+    : `Accuracy is ${accuracyChange > 0 ? "up" : "down"} ${Math.abs(accuracyChange)} ${Math.abs(accuracyChange) === 1 ? "point" : "points"}`;
+  const speedCopy = Math.abs(speedChange) < 0.1
+    ? "answer speed is steady"
+    : `answers are ${Math.abs(speedChange).toFixed(1)}s ${speedChange > 0 ? "faster" : "slower"}`;
+  insight.textContent = `${accuracyCopy}, and ${speedCopy} across your recent sessions.`;
+}
+
+function renderRecentSessions(points) {
+  const container = document.querySelector("#recent-sessions");
+  container.innerHTML = "";
+  const recent = points.slice(-6).reverse();
+  if (!recent.length) {
+    container.innerHTML = '<p class="recent-empty">No sessions for this table yet. A focused, mixed, or review round will all count.</p>';
+    return;
+  }
+  recent.forEach((point) => {
+    const row = document.createElement("div");
+    row.className = "recent-session";
+    const date = new Date(point.startedAt);
+    const dateLabel = date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    const timeLabel = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    row.innerHTML = `
+      <div class="recent-session-main">
+        <strong>${dateLabel}</strong>
+        <small>${timeLabel} · ${point.status === "completed" ? "Completed" : "Ended early"}</small>
+      </div>
+      <div class="recent-session-metrics">
+        <div class="recent-session-metric"><strong>${point.correct}/${point.answered}</strong><small>correct</small></div>
+        <div class="recent-session-metric"><strong>${Math.round(point.accuracy)}%</strong><small>accuracy</small></div>
+        <div class="recent-session-metric"><strong>${(point.averageMs / 1000).toFixed(1)}s</strong><small>avg. answer</small></div>
+      </div>
+    `;
+    container.append(row);
+  });
+}
+
+function drawTrendChart(canvasId, emptyId, points, metric) {
+  const canvas = document.querySelector(`#${canvasId}`);
+  const empty = document.querySelector(`#${emptyId}`);
+  canvas.hidden = points.length === 0;
+  empty.hidden = points.length > 0;
+  if (!points.length) return;
+
+  const width = canvas.clientWidth || 420;
+  const height = 230;
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  const context = canvas.getContext("2d");
+  context.scale(ratio, ratio);
+  context.clearRect(0, 0, width, height);
+
+  const styles = getComputedStyle(document.documentElement);
+  const lineColor = styles.getPropertyValue(metric === "accuracy" ? "--purple" : "--coral").trim();
+  const gridColor = styles.getPropertyValue("--line").trim();
+  const labelColor = styles.getPropertyValue("--muted").trim();
+  const values = points.map((point) => metric === "accuracy" ? point.accuracy : point.averageMs / 1000);
+  const maximum = metric === "accuracy" ? 100 : Math.max(5, Math.ceil(Math.max(...values) * 1.15));
+  const padding = { top: 12, right: 12, bottom: 30, left: 38 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+
+  context.font = '11px "DM Sans", system-ui, sans-serif';
+  context.textAlign = "right";
+  context.textBaseline = "middle";
+  context.strokeStyle = gridColor;
+  context.fillStyle = labelColor;
+  context.lineWidth = 1;
+  for (let step = 0; step <= 4; step += 1) {
+    const y = padding.top + (plotHeight * step) / 4;
+    const value = maximum - (maximum * step) / 4;
+    context.beginPath();
+    context.moveTo(padding.left, y);
+    context.lineTo(width - padding.right, y);
+    context.stroke();
+    context.fillText(metric === "accuracy" ? `${Math.round(value)}%` : `${value.toFixed(value < 10 ? 1 : 0)}s`, padding.left - 7, y);
+  }
+
+  const xFor = (index) => points.length === 1
+    ? padding.left + plotWidth / 2
+    : padding.left + (plotWidth * index) / (points.length - 1);
+  const yFor = (value) => padding.top + plotHeight - (Math.min(value, maximum) / maximum) * plotHeight;
+  const gradient = context.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+  gradient.addColorStop(0, `${lineColor}38`);
+  gradient.addColorStop(1, `${lineColor}00`);
+
+  context.beginPath();
+  values.forEach((value, index) => {
+    const x = xFor(index);
+    const y = yFor(value);
+    if (index === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  });
+  if (points.length > 1) {
+    context.lineTo(xFor(points.length - 1), height - padding.bottom);
+    context.lineTo(xFor(0), height - padding.bottom);
+    context.closePath();
+    context.fillStyle = gradient;
+    context.fill();
+  }
+
+  context.beginPath();
+  values.forEach((value, index) => {
+    const x = xFor(index);
+    const y = yFor(value);
+    if (index === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  });
+  context.strokeStyle = lineColor;
+  context.lineWidth = 3;
+  context.lineJoin = "round";
+  context.lineCap = "round";
+  context.stroke();
+
+  values.forEach((value, index) => {
+    context.beginPath();
+    context.arc(xFor(index), yFor(value), 4, 0, Math.PI * 2);
+    context.fillStyle = lineColor;
+    context.fill();
+  });
+
+  context.fillStyle = labelColor;
+  context.textBaseline = "bottom";
+  const labelIndexes = points.length > 2 ? [0, Math.floor((points.length - 1) / 2), points.length - 1] : points.map((_, index) => index);
+  [...new Set(labelIndexes)].forEach((index) => {
+    const label = new Date(points[index].startedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    context.textAlign = index === 0 ? "left" : index === points.length - 1 ? "right" : "center";
+    context.fillText(label, xFor(index), height - 5);
+  });
+  const firstValue = values[0];
+  const lastValue = values[values.length - 1];
+  canvas.setAttribute("aria-label", metric === "accuracy"
+    ? `Accuracy trend across ${points.length} sessions, from ${Math.round(firstValue)} percent to ${Math.round(lastValue)} percent.`
+    : `Answer speed trend across ${points.length} sessions, from ${firstValue.toFixed(1)} to ${lastValue.toFixed(1)} seconds per answer.`);
 }
 
 function resetProgress() {
@@ -512,7 +883,7 @@ document.querySelector("#start-practice").addEventListener("click", startPractic
 document.querySelector("#answer-form").addEventListener("submit", answerQuestion);
 document.querySelector("#next-question").addEventListener("click", nextQuestion);
 document.querySelector("#show-hint").addEventListener("click", showHint);
-document.querySelector("#quit-quiz").addEventListener("click", resetPracticePanels);
+document.querySelector("#quit-quiz").addEventListener("click", quitPractice);
 document.querySelector("#practice-again").addEventListener("click", () => {
   document.querySelector("#results-panel").hidden = true;
   document.querySelector("#practice-setup").hidden = false;
@@ -523,6 +894,10 @@ document.querySelector("#review-round").addEventListener("click", () => {
   document.querySelector("#practice-setup").hidden = false;
 });
 document.querySelector("#reset-progress").addEventListener("click", resetProgress);
+document.querySelector("#analytics-table-select").addEventListener("change", (event) => {
+  state.analyticsTable = Number(event.target.value);
+  renderProgress();
+});
 
 const installAppButton = document.querySelector("#install-app");
 const themeToggleButton = document.querySelector("#theme-toggle");
@@ -542,6 +917,7 @@ function setTheme(theme) {
   document.documentElement.style.colorScheme = theme;
   localStorage.setItem("mathy-theme", theme);
   updateThemeButton(theme);
+  if (!document.querySelector("#progress-view").hidden) renderProgress();
 }
 
 updateThemeButton(document.documentElement.dataset.theme || "light");
@@ -567,6 +943,16 @@ installAppButton.addEventListener("click", async () => {
 window.addEventListener("appinstalled", () => {
   installAppButton.hidden = true;
   deferredInstallPrompt = null;
+});
+
+window.addEventListener("resize", () => {
+  if (document.querySelector("#progress-view").hidden) return;
+  window.cancelAnimationFrame(chartResizeFrame);
+  chartResizeFrame = window.requestAnimationFrame(renderTableAnalytics);
+});
+
+window.addEventListener("pagehide", () => {
+  if (state.activeSession) finalizeActiveSession("ended");
 });
 
 if ("serviceWorker" in navigator) {

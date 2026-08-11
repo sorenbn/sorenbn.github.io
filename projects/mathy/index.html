@@ -216,6 +216,7 @@
             <button class="text-button" id="quit-quiz" type="button">← End round</button>
             <span id="question-position">Question 1 of 10</span>
             <div class="live-score">
+              <span class="live-time" aria-label="Elapsed time"><span aria-hidden="true">◷</span> <strong id="live-elapsed">0:00</strong></span>
               <span>✓ <strong id="live-correct">0</strong></span>
               <span>🔥 <strong id="live-streak">0</strong></span>
             </div>
@@ -262,6 +263,7 @@
             <div><strong id="result-percent">80%</strong><span>accuracy</span></div>
             <div><strong id="result-streak">5</strong><span>best streak</span></div>
             <div><strong id="result-missed">2</strong><span>to review</span></div>
+            <div><strong id="result-time">0:00</strong><span>round time</span></div>
           </div>
           <div class="result-actions">
             <button class="primary-button" id="practice-again" type="button">Practice again</button>
@@ -275,26 +277,37 @@
           <div>
             <p class="eyebrow">Your learning journey</p>
             <h1>Small wins add up.</h1>
-            <p>Your progress is saved on this device.</p>
+            <p id="session-summary">Your progress is saved on this device.</p>
           </div>
           <button class="secondary-button" id="reset-progress" type="button">Reset progress</button>
         </div>
 
+        <div class="progress-filter-bar">
+          <div>
+            <p class="step-label">Table focus</p>
+            <h2 id="analytics-heading">Choose a table to inspect</h2>
+          </div>
+          <label class="analytics-table-picker">
+            <span>Show table</span>
+            <select id="analytics-table-select" aria-label="Choose a table to analyse"></select>
+          </label>
+        </div>
+
         <div class="overview-grid">
           <article class="overview-card purple-card">
+            <span aria-hidden="true">◷</span>
+            <strong id="total-practice-time">0m</strong>
+            <small>practice time</small>
+          </article>
+          <article class="overview-card coral-card">
             <span aria-hidden="true">✓</span>
             <strong id="total-correct">0</strong>
             <small>correct answers</small>
           </article>
-          <article class="overview-card coral-card">
-            <span aria-hidden="true">🔥</span>
-            <strong id="best-streak">0</strong>
-            <small>best streak</small>
-          </article>
           <article class="overview-card yellow-card">
-            <span aria-hidden="true">★</span>
-            <strong id="rounds-complete">0</strong>
-            <small>rounds complete</small>
+            <span aria-hidden="true">×</span>
+            <strong id="total-mistakes">0</strong>
+            <small>mistakes</small>
           </article>
           <article class="overview-card green-card">
             <span aria-hidden="true">◎</span>
@@ -302,6 +315,48 @@
             <small>overall accuracy</small>
           </article>
         </div>
+
+        <section class="analytics-section" aria-labelledby="analytics-heading">
+          <div class="analytics-kpis">
+            <div><small>Accuracy</small><strong id="table-accuracy">—</strong></div>
+            <div><small>Average answer</small><strong id="table-average-time">—</strong></div>
+            <div><small>Correct</small><strong id="table-correct">0</strong></div>
+            <div><small>Mistakes</small><strong id="table-mistakes">0</strong></div>
+          </div>
+
+          <p class="trend-insight" id="trend-insight">Finish a practice round to start your trend.</p>
+
+          <div class="chart-grid">
+            <article class="chart-card">
+              <div class="chart-heading">
+                <div><span class="chart-dot purple-dot" aria-hidden="true"></span><h3>Accuracy trend</h3></div>
+                <small>Last 12 sessions</small>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="accuracy-chart" role="img" aria-label="Accuracy trend chart"></canvas>
+                <p class="chart-empty" id="accuracy-chart-empty">No timed sessions for this table yet.</p>
+              </div>
+            </article>
+            <article class="chart-card">
+              <div class="chart-heading">
+                <div><span class="chart-dot coral-dot" aria-hidden="true"></span><h3>Answer speed</h3></div>
+                <small>Seconds per answer</small>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="speed-chart" role="img" aria-label="Average answer speed trend chart"></canvas>
+                <p class="chart-empty" id="speed-chart-empty">Your response-time trend will appear here.</p>
+              </div>
+            </article>
+          </div>
+
+          <article class="recent-card">
+            <div class="chart-heading">
+              <div><span class="chart-dot green-dot" aria-hidden="true"></span><h3>Recent sessions</h3></div>
+              <small id="recent-table-label">6 times table</small>
+            </div>
+            <div class="recent-sessions" id="recent-sessions"></div>
+          </article>
+        </section>
 
         <div class="mastery-section">
           <div class="section-heading">
