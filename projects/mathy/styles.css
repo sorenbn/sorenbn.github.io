@@ -90,15 +90,24 @@ html[data-theme="dark"] .install-button:hover {
 }
 
 html {
+  min-height: 100%;
   scroll-behavior: smooth;
 }
 
 body {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
+  flex-direction: column;
   color: var(--ink);
   background: var(--paper);
   font-family: var(--font-body);
   line-height: 1.5;
+}
+
+main {
+  flex: 1 0 auto;
 }
 
 button,
@@ -979,6 +988,35 @@ h3 {
   color: var(--muted);
 }
 
+.record-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: fit-content;
+  margin: 14px auto 0;
+  padding: 10px 14px;
+  color: var(--yellow-ink);
+  background: var(--yellow-soft);
+  border: 1px solid var(--yellow);
+  border-radius: 14px;
+  text-align: left;
+}
+
+.record-banner > span {
+  font-size: 1.55rem;
+}
+
+.record-banner strong,
+.record-banner small {
+  display: block;
+}
+
+.record-banner small {
+  margin-top: 1px;
+  color: var(--muted);
+}
+
 .result-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1407,9 +1445,11 @@ h3 {
 
 footer {
   display: flex;
+  flex-shrink: 0;
   justify-content: space-between;
   gap: 20px;
   padding: 18px max(24px, calc((100vw - 1160px) / 2));
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
   color: var(--footer-muted);
   background: var(--deep);
 }

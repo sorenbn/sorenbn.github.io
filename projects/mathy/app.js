@@ -513,8 +513,36 @@ function nextQuestion() {
   }
 }
 
+function timeRecordForSession(session) {
+  if (!session || session.mode !== "focused" || !session.practiceTimeMs) return null;
+  const comparableSessions = state.progress.sessions.filter((candidate) =>
+    candidate.id !== session.id
+    && candidate.status === "completed"
+    && candidate.mode === "focused"
+    && candidate.subject === session.subject
+    && Number(candidate.selectedTable) === Number(session.selectedTable)
+    && Number(candidate.plannedQuestions) === Number(session.plannedQuestions)
+    && Number(candidate.correct) === Number(session.correct)
+    && Number(candidate.practiceTimeMs) > 0
+  );
+  if (!comparableSessions.length) return null;
+  const previousBestMs = Math.min(...comparableSessions.map((candidate) => candidate.practiceTimeMs));
+  if (session.practiceTimeMs >= previousBestMs) return null;
+  return {
+    previousBestMs,
+    improvementMs: previousBestMs - session.practiceTimeMs,
+  };
+}
+
+function formatTimeImprovement(milliseconds) {
+  if (milliseconds < 1000) return "under a second";
+  const seconds = Math.round(milliseconds / 100) / 10;
+  return `${seconds} ${seconds === 1 ? "second" : "seconds"}`;
+}
+
 function finishRound() {
   const session = finalizeActiveSession("completed");
+  const timeRecord = timeRecordForSession(session);
   document.querySelector("#quiz-panel").hidden = true;
   document.querySelector("#results-panel").hidden = false;
   const percent = Math.round((state.correct / state.questions.length) * 100);
@@ -530,6 +558,11 @@ function finishRound() {
   document.querySelector("#result-streak").textContent = state.roundBestStreak;
   document.querySelector("#result-missed").textContent = state.missed.length;
   document.querySelector("#result-time").textContent = formatDuration(session?.practiceTimeMs || 0);
+  const recordBanner = document.querySelector("#time-record-banner");
+  recordBanner.hidden = !timeRecord;
+  if (timeRecord) {
+    document.querySelector("#time-record-copy").textContent = `${formatDuration(session.practiceTimeMs)} — ${formatTimeImprovement(timeRecord.improvementMs)} faster than your previous best.`;
+  }
   document.querySelector("#review-round").hidden = state.missed.length === 0;
   document.querySelector("#header-best-streak").textContent = state.progress.bestStreak;
 }
