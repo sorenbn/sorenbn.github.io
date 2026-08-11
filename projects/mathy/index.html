@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Learn multiplication and division tables with focused practice, mixed challenges, and progress tracking."
+    />
+    <meta name="theme-color" content="#6557e8" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Mathy" />
+    <title>Mathy — Make the tables click</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fredoka:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="site-header">
+      <a class="brand" href="#learn" aria-label="Mathy home">
+        <span class="brand-mark" aria-hidden="true">M</span>
+        <span>mathy</span>
+      </a>
+
+      <nav class="main-nav" aria-label="Main navigation">
+        <button class="nav-button is-active" type="button" data-view-target="learn">
+          <span aria-hidden="true">✦</span> Learn
+        </button>
+        <button class="nav-button" type="button" data-view-target="practice">
+          <span aria-hidden="true">▶</span> Practice
+        </button>
+        <button class="nav-button" type="button" data-view-target="progress">
+          <span aria-hidden="true">↗</span> Progress
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <button class="install-button" id="install-app" type="button" hidden>
+          <span aria-hidden="true">↓</span> Install app
+        </button>
+        <label class="subject-picker">
+          <span>Subject</span>
+          <select id="subject-select">
+            <option value="multiplication">Multiplication</option>
+            <option value="division">Division</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="view is-active" id="learn-view" data-view="learn">
+        <div class="learn-hero page-shell">
+          <div class="hero-copy">
+            <p class="eyebrow">Learn one pattern at a time</p>
+            <h1>Make the tables <span>click.</span></h1>
+            <p class="hero-intro">
+              Choose a table, notice the pattern, then test yourself when you feel ready.
+            </p>
+          </div>
+
+          <div class="hero-doodle" aria-hidden="true">
+            <div class="doodle-card doodle-one">6 × 7</div>
+            <div class="doodle-card doodle-two">42!</div>
+            <div class="spark spark-one">✦</div>
+            <div class="spark spark-two">✦</div>
+          </div>
+        </div>
+
+        <div class="learning-area page-shell">
+          <div class="section-heading">
+            <div>
+              <p class="step-label">Step 1</p>
+              <h2>Choose a table</h2>
+            </div>
+            <p id="learn-subject-copy">Which multiplication table are you working on?</p>
+          </div>
+
+          <div class="table-picker" id="learn-table-picker" role="group" aria-label="Choose a table"></div>
+
+          <div class="study-layout">
+            <article class="study-card">
+              <div class="study-card-header">
+                <div>
+                  <p class="step-label">Step 2</p>
+                  <h2 id="study-title">The 6 times table</h2>
+                </div>
+                <button class="cover-button" id="cover-answers" type="button" aria-pressed="false">
+                  <span aria-hidden="true">◉</span> Cover answers
+                </button>
+              </div>
+
+              <p class="cover-help" id="cover-help">Read each fact out loud. Rhythm helps it stick.</p>
+              <div class="fact-grid" id="fact-grid"></div>
+            </article>
+
+            <aside class="side-stack">
+              <article class="pattern-card">
+                <span class="card-icon" aria-hidden="true">💡</span>
+                <p class="step-label">Pattern spotter</p>
+                <h3 id="pattern-title">Count up in sixes</h3>
+                <p id="pattern-copy">Each answer is 6 more than the one before it.</p>
+                <div class="pattern-sequence" id="pattern-sequence">6 · 12 · 18 · 24</div>
+              </article>
+
+              <article class="ready-card">
+                <p class="step-label">Step 3</p>
+                <h3>Ready to try?</h3>
+                <p>Start with this table while the pattern is fresh.</p>
+                <button class="primary-button full-width" id="practice-current-table" type="button">
+                  Practice this table <span aria-hidden="true">→</span>
+                </button>
+              </article>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="view page-shell" id="practice-view" data-view="practice" hidden>
+        <div class="practice-header">
+          <div>
+            <p class="eyebrow">Train your recall</p>
+            <h1>Choose your challenge.</h1>
+            <p>Short, focused rounds make practice easier to repeat.</p>
+          </div>
+          <div class="mini-stat" aria-label="Best streak">
+            <span aria-hidden="true">🔥</span>
+            <div><strong id="header-best-streak">0</strong><small>best streak</small></div>
+          </div>
+        </div>
+
+        <div id="practice-setup">
+          <div class="mode-grid" role="radiogroup" aria-label="Practice mode">
+            <button class="mode-card is-selected" type="button" role="radio" aria-checked="true" data-mode="focused">
+              <span class="mode-icon mode-icon-purple" aria-hidden="true">◎</span>
+              <span class="mode-copy">
+                <strong>One table</strong>
+                <small>Build confidence with a table you choose.</small>
+              </span>
+              <span class="radio-dot" aria-hidden="true"></span>
+            </button>
+            <button class="mode-card" type="button" role="radio" aria-checked="false" data-mode="mixed">
+              <span class="mode-icon mode-icon-coral" aria-hidden="true">⌁</span>
+              <span class="mode-copy">
+                <strong>Mixed tables</strong>
+                <small>Random questions from every table.</small>
+              </span>
+              <span class="radio-dot" aria-hidden="true"></span>
+            </button>
+            <button class="mode-card" type="button" role="radio" aria-checked="false" data-mode="review">
+              <span class="mode-icon mode-icon-yellow" aria-hidden="true">↺</span>
+              <span class="mode-copy">
+                <strong>Review mistakes</strong>
+                <small>Revisit facts that have tripped you up.</small>
+              </span>
+              <span class="radio-dot" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <div class="setup-panel">
+            <div class="setup-group" id="focused-table-group">
+              <div class="setup-label-row">
+                <label>Choose your table</label>
+                <span id="focused-table-label">6 times table</span>
+              </div>
+              <div class="table-picker compact" id="practice-table-picker" role="group" aria-label="Choose a practice table"></div>
+            </div>
+
+            <div class="setup-row">
+              <div class="setup-group">
+                <label for="question-count">Round length</label>
+                <select id="question-count">
+                  <option value="10">10 questions</option>
+                  <option value="20">20 questions</option>
+                  <option value="30">30 questions</option>
+                </select>
+              </div>
+              <button class="primary-button start-button" id="start-practice" type="button">
+                Start practice <span aria-hidden="true">→</span>
+              </button>
+            </div>
+            <p class="setup-note" id="setup-note" role="status"></p>
+          </div>
+        </div>
+
+        <div id="quiz-panel" class="quiz-panel" hidden>
+          <div class="quiz-topline">
+            <button class="text-button" id="quit-quiz" type="button">← End round</button>
+            <span id="question-position">Question 1 of 10</span>
+            <div class="live-score">
+              <span>✓ <strong id="live-correct">0</strong></span>
+              <span>🔥 <strong id="live-streak">0</strong></span>
+            </div>
+          </div>
+          <div class="progress-track" aria-hidden="true"><span id="quiz-progress"></span></div>
+
+          <article class="question-card">
+            <p class="question-kicker" id="question-kicker">The 6 times table</p>
+            <div class="equation" id="equation" aria-live="polite">6 × 7 = ?</div>
+            <p class="question-context" id="question-context">What number completes the fact?</p>
+
+            <form id="answer-form">
+              <label class="sr-only" for="answer-input">Your answer</label>
+              <input
+                id="answer-input"
+                type="number"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="?"
+                min="0"
+                required
+              />
+              <button class="primary-button" id="check-answer" type="submit">Check answer</button>
+            </form>
+
+            <button class="hint-button" id="show-hint" type="button">Need a hint?</button>
+            <p class="hint-copy" id="hint-copy" hidden></p>
+            <div class="feedback" id="feedback" role="status" aria-live="polite" hidden>
+              <div>
+                <strong id="feedback-title">That’s it!</strong>
+                <span id="feedback-copy">6 × 7 = 42</span>
+              </div>
+              <button class="next-button" id="next-question" type="button">Next →</button>
+            </div>
+          </article>
+        </div>
+
+        <div id="results-panel" class="results-panel" hidden>
+          <div class="result-burst" aria-hidden="true">★</div>
+          <p class="eyebrow">Round complete</p>
+          <h2 id="result-heading">Nicely done!</h2>
+          <p id="result-summary">You got 8 out of 10 correct.</p>
+          <div class="result-stats">
+            <div><strong id="result-percent">80%</strong><span>accuracy</span></div>
+            <div><strong id="result-streak">5</strong><span>best streak</span></div>
+            <div><strong id="result-missed">2</strong><span>to review</span></div>
+          </div>
+          <div class="result-actions">
+            <button class="primary-button" id="practice-again" type="button">Practice again</button>
+            <button class="secondary-button" id="review-round" type="button">Review missed facts</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view page-shell" id="progress-view" data-view="progress" hidden>
+        <div class="progress-header">
+          <div>
+            <p class="eyebrow">Your learning journey</p>
+            <h1>Small wins add up.</h1>
+            <p>Your progress is saved on this device.</p>
+          </div>
+          <button class="secondary-button" id="reset-progress" type="button">Reset progress</button>
+        </div>
+
+        <div class="overview-grid">
+          <article class="overview-card purple-card">
+            <span aria-hidden="true">✓</span>
+            <strong id="total-correct">0</strong>
+            <small>correct answers</small>
+          </article>
+          <article class="overview-card coral-card">
+            <span aria-hidden="true">🔥</span>
+            <strong id="best-streak">0</strong>
+            <small>best streak</small>
+          </article>
+          <article class="overview-card yellow-card">
+            <span aria-hidden="true">★</span>
+            <strong id="rounds-complete">0</strong>
+            <small>rounds complete</small>
+          </article>
+          <article class="overview-card green-card">
+            <span aria-hidden="true">◎</span>
+            <strong id="overall-accuracy">—</strong>
+            <small>overall accuracy</small>
+          </article>
+        </div>
+
+        <div class="mastery-section">
+          <div class="section-heading">
+            <div>
+              <p class="step-label">Table by table</p>
+              <h2 id="mastery-heading">Multiplication mastery</h2>
+            </div>
+            <p>Practice a fact a few times to make the score meaningful.</p>
+          </div>
+          <div class="mastery-grid" id="mastery-grid"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>mathy</span>
+      <p>Take your time. Getting it wrong is part of getting it right.</p>
+    </footer>
+  </body>
+</html>

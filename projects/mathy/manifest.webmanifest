@@ -1,0 +1,42 @@
+{
+  "id": "./",
+  "name": "Mathy — Make the tables click",
+  "short_name": "Mathy",
+  "description": "Learn multiplication and division tables with focused practice, mixed challenges, and progress tracking.",
+  "lang": "en",
+  "start_url": "./#learn",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fbfaf6",
+  "theme_color": "#6557e8",
+  "categories": ["education", "games"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Practice tables",
+      "short_name": "Practice",
+      "url": "./#practice",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "View progress",
+      "short_name": "Progress",
+      "url": "./#progress",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
