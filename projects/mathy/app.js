@@ -68,13 +68,7 @@ function loadProgress() {
         stats.hints = Number(stats.hints) || 0;
       });
     });
-    progress.sessions.forEach((session) => {
-      if (session.status === "in-progress") {
-        session.status = "ended";
-        session.endedAt = session.endedAt || new Date().toISOString();
-        session.durationMs = session.durationMs || sumResponseTime(session.questions || []);
-      }
-    });
+    progress.sessions = progress.sessions.filter((session) => session.status === "completed");
     return progress;
   } catch {
     return defaultProgress();
@@ -390,6 +384,8 @@ function finalizeActiveSession(status) {
   if (status === "completed") {
     state.progress.rounds += 1;
     state.progress.bestStreak = Math.max(state.progress.bestStreak, state.roundBestStreak);
+  } else {
+    state.progress.sessions = state.progress.sessions.filter((savedSession) => savedSession.id !== session.id);
   }
   stopRoundTimer();
   state.activeSession = null;
@@ -434,38 +430,15 @@ function answerQuestion(event) {
   const responseMs = Math.max(0, Date.now() - state.questionStartedAt);
   state.answered = true;
   stopRoundTimer();
-  state.progress.totalAnswered += 1;
-
-  const tableStats = state.progress.tables[question.subject][question.table] || {
-    correct: 0,
-    answered: 0,
-    mistakes: 0,
-    totalResponseMs: 0,
-    hints: 0,
-  };
-  tableStats.answered += 1;
-  tableStats.totalResponseMs = (tableStats.totalResponseMs || 0) + responseMs;
-  tableStats.hints = (tableStats.hints || 0) + (state.hintUsed ? 1 : 0);
-  tableStats.lastPracticedAt = new Date().toISOString();
 
   if (correct) {
     state.correct += 1;
     state.streak += 1;
     state.roundBestStreak = Math.max(state.roundBestStreak, state.streak);
-    state.progress.totalCorrect += 1;
-    tableStats.correct += 1;
-    delete state.progress.mistakes[question.key];
   } else {
     state.streak = 0;
     state.missed.push(question);
-    tableStats.mistakes = (tableStats.mistakes || 0) + 1;
-    state.progress.mistakes[question.key] = {
-      subject: question.subject,
-      table: question.table,
-      value: question.value,
-    };
   }
-  state.progress.tables[question.subject][question.table] = tableStats;
   state.activeSession?.questions.push({
     subject: question.subject,
     table: question.table,
@@ -513,6 +486,40 @@ function nextQuestion() {
   }
 }
 
+function commitCompletedSession(session) {
+  if (!session || session.status !== "completed" || session.statsCommitted) return;
+  session.questions.forEach((answer) => {
+    const tableStats = state.progress.tables[answer.subject][answer.table] || {
+      correct: 0,
+      answered: 0,
+      mistakes: 0,
+      totalResponseMs: 0,
+      hints: 0,
+    };
+    tableStats.answered += 1;
+    tableStats.totalResponseMs = (tableStats.totalResponseMs || 0) + answer.responseMs;
+    tableStats.hints = (tableStats.hints || 0) + (answer.usedHint ? 1 : 0);
+    tableStats.lastPracticedAt = answer.answeredAt || session.endedAt;
+    state.progress.totalAnswered += 1;
+    const mistakeKey = `${answer.subject}:${answer.table}:${answer.value}`;
+    if (answer.correct) {
+      tableStats.correct += 1;
+      state.progress.totalCorrect += 1;
+      delete state.progress.mistakes[mistakeKey];
+    } else {
+      tableStats.mistakes = (tableStats.mistakes || 0) + 1;
+      state.progress.mistakes[mistakeKey] = {
+        subject: answer.subject,
+        table: answer.table,
+        value: answer.value,
+      };
+    }
+    state.progress.tables[answer.subject][answer.table] = tableStats;
+  });
+  session.statsCommitted = true;
+  saveProgress();
+}
+
 function timeRecordForSession(session) {
   if (!session || session.mode !== "focused" || !session.practiceTimeMs) return null;
   const comparableSessions = state.progress.sessions.filter((candidate) =>
@@ -542,6 +549,7 @@ function formatTimeImprovement(milliseconds) {
 
 function finishRound() {
   const session = finalizeActiveSession("completed");
+  commitCompletedSession(session);
   const timeRecord = timeRecordForSession(session);
   document.querySelector("#quiz-panel").hidden = true;
   document.querySelector("#results-panel").hidden = false;
@@ -611,7 +619,7 @@ function mistakeCount() {
 function renderProgress() {
   const progress = state.progress;
   const totalPracticeTime = progress.sessions
-    .filter((session) => session.status !== "in-progress")
+    .filter((session) => session.status === "completed")
     .reduce((total, session) => total + (Number(session.practiceTimeMs) || sumResponseTime(session.questions || [])), 0);
   const totalMistakes = Math.max(0, progress.totalAnswered - progress.totalCorrect);
   document.querySelector("#total-practice-time").textContent = totalPracticeTime
@@ -663,7 +671,7 @@ function renderProgress() {
 
 function tableSessionPoints(table = state.analyticsTable) {
   return state.progress.sessions
-    .filter((session) => session.subject === state.subject && session.status !== "in-progress")
+    .filter((session) => session.subject === state.subject && session.status === "completed")
     .map((session) => {
       const questions = (session.questions || []).filter((question) => Number(question.table) === table);
       if (!questions.length) return null;
@@ -924,6 +932,13 @@ document.querySelectorAll(".mode-card").forEach((card) => {
 
 document.querySelector("#start-practice").addEventListener("click", startPractice);
 document.querySelector("#answer-form").addEventListener("submit", answerQuestion);
+document.querySelector("#answer-input").addEventListener("input", (event) => {
+  if (state.answered || !state.activeSession || event.currentTarget.value === "") return;
+  const question = state.questions[state.currentIndex];
+  if (Number(event.currentTarget.value) === question.answer) {
+    document.querySelector("#answer-form").requestSubmit();
+  }
+});
 document.querySelector("#next-question").addEventListener("click", nextQuestion);
 document.querySelector("#show-hint").addEventListener("click", showHint);
 document.querySelector("#quit-quiz").addEventListener("click", quitPractice);
