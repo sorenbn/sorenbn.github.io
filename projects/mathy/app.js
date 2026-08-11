@@ -525,6 +525,30 @@ document.querySelector("#review-round").addEventListener("click", () => {
 document.querySelector("#reset-progress").addEventListener("click", resetProgress);
 
 const installAppButton = document.querySelector("#install-app");
+const themeToggleButton = document.querySelector("#theme-toggle");
+const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+
+function updateThemeButton(theme) {
+  const dark = theme === "dark";
+  themeToggleButton.querySelector(".theme-icon").textContent = dark ? "☀" : "☾";
+  themeToggleButton.querySelector(".theme-label").textContent = dark ? "Light" : "Dark";
+  themeToggleButton.setAttribute("aria-label", `Switch to ${dark ? "light" : "dark"} mode`);
+  themeToggleButton.setAttribute("aria-pressed", String(dark));
+  themeColorMeta.content = dark ? "#171522" : "#6557e8";
+}
+
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  localStorage.setItem("mathy-theme", theme);
+  updateThemeButton(theme);
+}
+
+updateThemeButton(document.documentElement.dataset.theme || "light");
+themeToggleButton.addEventListener("click", () => {
+  const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  setTheme(nextTheme);
+});
 
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();

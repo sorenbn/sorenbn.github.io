@@ -13,6 +13,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Mathy" />
     <title>Mathy — Make the tables click</title>
+    <script>
+      (() => {
+        try {
+          const savedTheme = localStorage.getItem("mathy-theme");
+          const theme = savedTheme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
@@ -47,6 +59,10 @@
       </nav>
 
       <div class="header-actions">
+        <button class="theme-button" id="theme-toggle" type="button" aria-label="Switch to dark mode">
+          <span class="theme-icon" aria-hidden="true">☾</span>
+          <span class="theme-label">Dark</span>
+        </button>
         <button class="install-button" id="install-app" type="button" hidden>
           <span aria-hidden="true">↓</span> Install app
         </button>
