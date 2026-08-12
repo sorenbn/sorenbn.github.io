@@ -942,7 +942,9 @@ document.querySelector("#answer-form").addEventListener("submit", answerQuestion
 document.querySelector("#answer-input").addEventListener("input", (event) => {
   if (state.answered || !state.activeSession || event.currentTarget.value === "") return;
   const question = state.questions[state.currentIndex];
-  if (Number(event.currentTarget.value) === question.answer) {
+  const enteredDigits = event.currentTarget.value.replace(/\D/g, "").length;
+  const expectedDigits = String(Math.abs(question.answer)).length;
+  if (enteredDigits >= expectedDigits) {
     document.querySelector("#answer-form").requestSubmit();
   }
 });
